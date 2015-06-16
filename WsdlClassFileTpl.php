@@ -235,6 +235,7 @@ class PackageNameWsdlClass extends stdClass implements ArrayAccess,Iterator,Coun
     {
         return self::$soapClient;
     }
+
     /**
      * Static method setting current SoapClient
      * @param SoapClient $_soapClient
@@ -327,7 +328,7 @@ class PackageNameWsdlClass extends stdClass implements ArrayAccess,Iterator,Coun
                     self::WSDL_CACHE_WSDL=>WSDL_CACHE_NONE,
                     self::WSDL_COMPRESSION=>null,
                     self::WSDL_CONNECTION_TIMEOUT=>null,
-                    self::WSDL_ENCODING=>null,
+                    self::WSDL_ENCODING=>"%encoding%",
                     self::WSDL_EXCEPTIONS=>true,
                     self::WSDL_FEATURES=>SOAP_SINGLE_ELEMENT_ARRAYS | SOAP_USE_XSI_ARRAY_TYPE,
                     self::WSDL_LOGIN=>null,
@@ -336,7 +337,7 @@ class PackageNameWsdlClass extends stdClass implements ArrayAccess,Iterator,Coun
                     self::WSDL_STREAM_CONTEXT=>null,
                     self::WSDL_TRACE=>true,
                     self::WSDL_TYPEMAP=>null,
-                    self::WSDL_URL=>self::VALUE_WSDL_URL,
+                    self::WSDL_URL=>"%urlFromConfig%",
                     self::WSDL_USER_AGENT=>null,
                     self::WSDL_PROXY_HOST=>null,
                     self::WSDL_PROXY_PORT=>null,

@@ -521,6 +521,19 @@ class WsdlToPhpGenerator extends SoapClient
      * @var array
      */
     private static $globals;
+
+    /**
+     *  php code that will return path to url
+     * @var string
+     */
+    private $urlFromConfig;
+
+    /**
+     * Encoding, if different from UTF-8
+     * @var null|string
+     */
+    private $enconding;
+
     /**
      * Constructor
      * @uses SoapClient::__construct()
@@ -558,14 +571,18 @@ class WsdlToPhpGenerator extends SoapClient
      * @uses WsdlToPhpGenerator::OPT_INHERITS_FROM_IDENTIFIER_KEY
      * @uses WsdlToPhpGenerator::OPT_SEND_PARAMETERS_AS_ARRAY_KEY
      * @param string $_pathToWsdl WSDL url or path
-     * @param string $_login login to get access to WSDL
-     * @param string $_password password to get access to WSDL
+     * @param bool|string $_login login to get access to WSDL
+     * @param bool|string $_password password to get access to WSDL
      * @param array $_options associative array between WsdlToPhpGenerator options keys and values
      * @param array $_wsdlOptions options to get access to WSDL
+     * @param string $urlFromConfig php code that will return path to url
+     * @param null|string $encoding Encoding, if different from UTF-8
      * @return WsdlToPhpGenerator
      */
-    public function __construct($_pathToWsdl,$_login = false,$_password = false,array $_options = array(),array $_wsdlOptions = array())
+    public function __construct( $_pathToWsdl, $_login = false, $_password = false, array $_options = array(), array $_wsdlOptions = array(), $urlFromConfig = null, $encoding = null)
     {
+        $this->urlFromConfig = $urlFromConfig;
+        $this->enconding = $encoding;
         $pathToWsdl = trim($_pathToWsdl);
         /**
          * Options for WSDL
@@ -586,20 +603,14 @@ class WsdlToPhpGenerator extends SoapClient
         /**
          * Construct
          */
-        try
-        {
-            parent::__construct($pathToWsdl,$options);
-        }
-        catch(SoapFault $fault)
-        {
+        try {
+            parent::__construct($pathToWsdl, $options);
+        } catch (SoapFault $fault) {
             //print_r($fault);
             $options['soap_version'] = SOAP_1_2;
-            try
-            {
-                parent::__construct($pathToWsdl,$options);
-            }
-            catch(SoapFault $fault)
-            {
+            try {
+                parent::__construct($pathToWsdl, $options);
+            } catch (SoapFault $fault) {
                 //print_r($fault);
             }
         }
@@ -607,21 +618,22 @@ class WsdlToPhpGenerator extends SoapClient
         /**
          * Sets attributes
          */
-        self::setOptionDebug(array_key_exists(self::OPT_DEBUG,$_options)?$_options[self::OPT_DEBUG]:false);
-        self::setOptionCategory(array_key_exists(self::OPT_CAT_KEY,$_options)?$_options[self::OPT_CAT_KEY]:self::OPT_CAT_START_NAME);
-        self::setOptionGenerateAutoloadFile(array_key_exists(self::OPT_GEN_AUTOLOAD_KEY,$_options)?$_options[self::OPT_GEN_AUTOLOAD_KEY]:false);
-        self::setOptionGenerateTutorialFile(array_key_exists(self::OPT_GEN_TUTORIAL_KEY,$_options)?$_options[self::OPT_GEN_TUTORIAL_KEY]:false);
-        self::setOptionAddComments(array_key_exists(self::OPT_ADD_COMMENTS,$_options)?$_options[self::OPT_ADD_COMMENTS]:array(
-                                                                                                                            'date'=>date('Y-m-d')));
-        self::setOptionSubCategory(array_key_exists(self::OPT_SUB_CAT_KEY,$_options)?$_options[self::OPT_SUB_CAT_KEY]:self::OPT_SUB_CAT_START_NAME);
-        self::setOptionGenerateWsdlClassFile(array_key_exists(self::OPT_GEN_WSDL_CLASS_KEY,$_options)?$_options[self::OPT_GEN_WSDL_CLASS_KEY]:false);
-        self::setOptionGatherMethods(array_key_exists(self::OPT_GATH_METH_KEY,$_options)?$_options[self::OPT_GATH_METH_KEY]:self::OPT_GATH_METH_START_NAME);
-        self::setOptionSendArrayAsParameter(array_key_exists(self::OPT_SEND_PARAM_AS_ARRAY_KEY,$_options)?$_options[self::OPT_SEND_PARAM_AS_ARRAY_KEY]:false);
-        self::setOptionResponseAsWsdlObject(array_key_exists(self::OPT_RESPONSE_AS_WSDL_OBJECT_KEY,$_options)?$_options[self::OPT_RESPONSE_AS_WSDL_OBJECT_KEY]:false);
-        self::setOptionGenericConstantsNames(array_key_exists(self::OPT_GENERIC_CONSTANTS_NAMES_KEY,$_options)?$_options[self::OPT_GENERIC_CONSTANTS_NAMES_KEY]:false);
-        self::setOptionInheritsClassIdentifier(array_key_exists(self::OPT_INHERITS_FROM_IDENTIFIER_KEY,$_options)?$_options[self::OPT_INHERITS_FROM_IDENTIFIER_KEY]:'');
-        self::setOptionSendParametersAsArray(array_key_exists(self::OPT_SEND_PARAMETERS_AS_ARRAY_KEY,$_options)?$_options[self::OPT_SEND_PARAMETERS_AS_ARRAY_KEY]:false);
+        self::setOptionDebug(array_key_exists(self::OPT_DEBUG, $_options) ? $_options[self::OPT_DEBUG] : false);
+        self::setOptionCategory(array_key_exists(self::OPT_CAT_KEY, $_options) ? $_options[self::OPT_CAT_KEY] : self::OPT_CAT_START_NAME);
+        self::setOptionGenerateAutoloadFile(array_key_exists(self::OPT_GEN_AUTOLOAD_KEY, $_options) ? $_options[self::OPT_GEN_AUTOLOAD_KEY] : false);
+        self::setOptionGenerateTutorialFile(array_key_exists(self::OPT_GEN_TUTORIAL_KEY, $_options) ? $_options[self::OPT_GEN_TUTORIAL_KEY] : false);
+        self::setOptionAddComments(array_key_exists(self::OPT_ADD_COMMENTS, $_options) ? $_options[self::OPT_ADD_COMMENTS] : array(
+            'date' => date('Y-m-d')));
+        self::setOptionSubCategory(array_key_exists(self::OPT_SUB_CAT_KEY, $_options) ? $_options[self::OPT_SUB_CAT_KEY] : self::OPT_SUB_CAT_START_NAME);
+        self::setOptionGenerateWsdlClassFile(array_key_exists(self::OPT_GEN_WSDL_CLASS_KEY, $_options) ? $_options[self::OPT_GEN_WSDL_CLASS_KEY] : false);
+        self::setOptionGatherMethods(array_key_exists(self::OPT_GATH_METH_KEY, $_options) ? $_options[self::OPT_GATH_METH_KEY] : self::OPT_GATH_METH_START_NAME);
+        self::setOptionSendArrayAsParameter(array_key_exists(self::OPT_SEND_PARAM_AS_ARRAY_KEY, $_options) ? $_options[self::OPT_SEND_PARAM_AS_ARRAY_KEY] : false);
+        self::setOptionResponseAsWsdlObject(array_key_exists(self::OPT_RESPONSE_AS_WSDL_OBJECT_KEY, $_options) ? $_options[self::OPT_RESPONSE_AS_WSDL_OBJECT_KEY] : false);
+        self::setOptionGenericConstantsNames(array_key_exists(self::OPT_GENERIC_CONSTANTS_NAMES_KEY, $_options) ? $_options[self::OPT_GENERIC_CONSTANTS_NAMES_KEY] : false);
+        self::setOptionInheritsClassIdentifier(array_key_exists(self::OPT_INHERITS_FROM_IDENTIFIER_KEY, $_options) ? $_options[self::OPT_INHERITS_FROM_IDENTIFIER_KEY] : '');
+        self::setOptionSendParametersAsArray(array_key_exists(self::OPT_SEND_PARAMETERS_AS_ARRAY_KEY, $_options) ? $_options[self::OPT_SEND_PARAMETERS_AS_ARRAY_KEY] : false);
     }
+
     /**
      * Generates all classes based on options
      * @uses WsdlToPhpGenerator::setPackageName()
@@ -650,37 +662,40 @@ class WsdlToPhpGenerator extends SoapClient
      * @param bool $_createRootDirectory create root directory if not exist
      * @return bool true|false depending on the well creation fot the root directory
      */
-    public function generateClasses($_packageName,$_rootDirectory,$_rootDirectoryRights = 0775,$_createRootDirectory = true)
+    public function generateClasses($_packageName, $_rootDirectory, $_rootDirectoryRights = 0775, $_createRootDirectory = true)
     {
         self::initGlobals();
         $wsdl = $this->getWsdl(0);
-        self::auditInit('generate_classes',$wsdl);
+        self::auditInit('generate_classes', $wsdl);
         self::setPackageName($_packageName);
-        $rootDirectory = $_rootDirectory . (substr($_rootDirectory,-1) != '/'?'/':'');
+        $rootDirectory = $_rootDirectory . (substr($_rootDirectory, -1) != '/' ? '/' : '');
         /**
          * Root directory
          */
-        if(!is_dir($rootDirectory) && !$_createRootDirectory)
+        if (!is_dir($rootDirectory) && !$_createRootDirectory) {
             return false;
-        elseif($_createRootDirectory)
-            @mkdir($rootDirectory,$_rootDirectoryRights);
+        } elseif ($_createRootDirectory) {
+            @mkdir($rootDirectory, $_rootDirectoryRights);
+        }
         /**
          * Begin process
          */
-        if(is_dir($rootDirectory))
-        {
+        if (is_dir($rootDirectory)) {
             /**
              * Initialize elements
              */
             $init = false;
-            if(!count($this->getStructs()))
+            if (!count($this->getStructs())) {
                 $this->initStructs();
-            else
+            } else {
                 $init = true;
-            if(!count($this->getServices()))
+            }
+            if (!count($this->getServices())) {
                 $this->initServices();
-            if(!$init && count($this->wsdls))
+            }
+            if (!$init && count($this->wsdls)) {
                 $this->loadWsdls($wsdl);
+            }
             /**
              * Initialize specific elements when all wsdls are loaded
              */
@@ -688,33 +703,38 @@ class WsdlToPhpGenerator extends SoapClient
             /**
              * Generates Wsdl Class ?
              */
-            if(self::getOptionGenerateWsdlClassFile())
+            if (self::getOptionGenerateWsdlClassFile()) {
                 $wsdlClassFile = $this->generateWsdlClassFile($rootDirectory);
-            else
+            } else {
                 $wsdlClassFile = array();
-            if(!count($wsdlClassFile))
+            }
+            if (!count($wsdlClassFile)) {
                 self::setOptionGenerateWsdlClassFile(false);
+            }
             /**
              * Generates classes files
              */
-            $structsClassesFiles = $this->generateStructsClasses($rootDirectory,$_rootDirectoryRights);
-            $servicesClassesFiles = $this->generateServicesClasses($rootDirectory,$_rootDirectoryRights);
+            $structsClassesFiles = $this->generateStructsClasses($rootDirectory, $_rootDirectoryRights);
+            $servicesClassesFiles = $this->generateServicesClasses($rootDirectory, $_rootDirectoryRights);
             $classMapFile = $this->generateClassMap($rootDirectory);
             /**
              * Generates autoload ?
              */
-            if(self::getOptionGenerateAutoloadFile())
-                self::generateAutoloadFile($rootDirectory,array_merge($wsdlClassFile,$structsClassesFiles,$servicesClassesFiles,$classMapFile));
+            if (self::getOptionGenerateAutoloadFile()) {
+                self::generateAutoloadFile($rootDirectory, array_merge($wsdlClassFile, $structsClassesFiles, $servicesClassesFiles, $classMapFile));
+            }
             /**
              * Generates tutorial ?
              */
-            if(self::getOptionGenerateTutorialFile())
-                $this->generateTutorialFile($rootDirectory,$servicesClassesFiles);
-            return self::audit('generate_classes',$wsdl);
+            if (self::getOptionGenerateTutorialFile()) {
+                $this->generateTutorialFile($rootDirectory, $servicesClassesFiles);
+            }
+            return self::audit('generate_classes', $wsdl);
+        } else {
+            return !self::audit('generate_classes', $wsdl);
         }
-        else
-            return !self::audit('generate_classes',$wsdl);
     }
+
     /**
      * Initialize structs defined in WSDL :
      * - Get structs defined
@@ -739,49 +759,47 @@ class WsdlToPhpGenerator extends SoapClient
     {
         self::auditInit('init_structs');
         $types = $this->__getTypes();
-        if(is_array($types) && count($types))
-        {
+        if (is_array($types) && count($types)) {
             $structsDefined = array();
-            foreach($types as $type)
-            {
+            foreach ($types as $type) {
                 $typeSignature = md5($type);
                 /**
                  * Remove useless break line, tabs
                  */
-                $type = str_replace("\r",'',$type);
-                $type = str_replace("\n",'',$type);
-                $type = str_replace("\t",'',$type);
+                $type = str_replace("\r", '', $type);
+                $type = str_replace("\n", '', $type);
+                $type = str_replace("\t", '', $type);
                 /**
                  * Remove curly braces
                  */
-                $type = str_replace("{",'',$type);
-                $type = str_replace("}",'',$type);
+                $type = str_replace("{", '', $type);
+                $type = str_replace("}", '', $type);
                 /**
                  * Remove brackets
                  */
-                $type = str_replace("[",'',$type);
-                $type = str_replace("]",'',$type);
+                $type = str_replace("[", '', $type);
+                $type = str_replace("]", '', $type);
                 /**
                  * Adds space to parse it
                  */
-                $type = str_replace(';',' ;',$type);
+                $type = str_replace(';', ' ;', $type);
                 /**
                  * Remove duplicate spaces
                  */
-                $type = preg_replace('/[\s]+/',' ',$type);
+                $type = preg_replace('/[\s]+/', ' ', $type);
                 /**
                  * Explode definition based on format :
                  * struct {struct_name} {paramName} {paramValue} ;[{paramName} {paramValue} ;]+
                  */
-                $typeDef = explode(' ',$type);
+                $typeDef = explode(' ', $type);
                 /**
                  * Gets struct definition start
                  */
                 $struct = $typeDef[0];
-                if($struct != 'struct')
-                {
-                    if(!empty($typeDef[1]))
+                if ($struct != 'struct') {
+                    if (!empty($typeDef[1])) {
                         $this->addVirtualStruct($typeDef[1]);
+                    }
                     continue;
                 }
                 /**
@@ -795,8 +813,9 @@ class WsdlToPhpGenerator extends SoapClient
                  * - struct Create { ArrayOfDetailItem Details; string UserID; string Password; string TestMode; etc. }
                  * This will generate a Struct class containing the merge of all the different structures
                  */
-                if(in_array($typeSignature,$structsDefined))
+                if (in_array($typeSignature, $structsDefined)) {
                     continue;
+                }
                 /**
                  * Collect struct params
                  */
@@ -806,53 +825,47 @@ class WsdlToPhpGenerator extends SoapClient
                 $structParamName = '';
                 $structParamType = '';
                 $typeDefCount = count($typeDef);
-                if($typeDefCount > 3)
-                {
-                    for($i = 2;$i < $typeDefCount;$i++)
-                    {
+                if ($typeDefCount > 3) {
+                    for ($i = 2; $i < $typeDefCount; $i++) {
                         $typeVal = $typeDef[$i];
-                        if($typeVal != '{' && is_string($typeVal) && !empty($typeVal) && !$start)
-                        {
+                        if ($typeVal != '{' && is_string($typeVal) && !empty($typeVal) && !$start) {
                             $end = false;
                             $then = false;
                             $start = true;
                         }
-                        if($typeVal === ';')
-                        {
+                        if ($typeVal === ';') {
                             $end = true;
                             $then = false;
                             $start = false;
                         }
-                        if($then)
-                        {
+                        if ($then) {
                             $structParamName = $typeVal;
-                            if(!empty($structParamType) && !empty($structParamName) && !empty($structName))
-                            {
-                                $this->addStruct($structName,$structParamName,$structParamType);
-                                array_push($structsDefined,$typeSignature);
+                            if (!empty($structParamType) && !empty($structParamName) && !empty($structName)) {
+                                $this->addStruct($structName, $structParamName, $structParamType);
+                                array_push($structsDefined, $typeSignature);
                                 $structParamName = '';
                                 $structParamType = '';
                             }
                         }
-                        if($start && !$then)
-                        {
+                        if ($start && !$then) {
                             /**
                              * Replace some weird definition to known valid type
                              */
-                            $typeVal = str_replace('<anyXML>','DOMDocument',$typeVal);
+                            $typeVal = str_replace('<anyXML>', 'DOMDocument', $typeVal);
                             $structParamType = $typeVal;
                             $then = true;
                         }
                     }
+                } else {
+                    $this->addStruct($structName, $structParamName, $structParamType);
                 }
-                else
-                    $this->addStruct($structName,$structParamName,$structParamType);
             }
             return self::audit('init_structs');
-        }
-        else
+        } else {
             return !self::audit('init_structs');
+        }
     }
+
     /**
      * Generates structs classes based on structs collected
      * @uses WsdlToPhpGenerator::getStructs()
@@ -870,28 +883,27 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_rootDirectory the directory
      * @param int $_rootDirectoryRights the directory permissions
      */
-    private function generateStructsClasses($_rootDirectory,$_rootDirectoryRights)
+    private function generateStructsClasses($_rootDirectory, $_rootDirectoryRights)
     {
         self::auditInit('generate_structs');
         $structs = $this->getStructs();
         $structsClassesFiles = array();
-        if(count($structs))
-        {
+        if (count($structs)) {
             /**
              * Ordering structs in order to generate mother class first and to put them on top in the autoload file
              */
             $structsToGenerateDone = array();
-            foreach($structs as $struct)
-            {
-                if(!array_key_exists($struct->getName(),$structsToGenerateDone))
+            foreach ($structs as $struct) {
+                if (!array_key_exists($struct->getName(), $structsToGenerateDone)) {
                     $structsToGenerateDone[$struct->getName()] = 0;
+                }
                 $model = WsdlToPhpModel::getModelByName($struct->getInheritance());
-                while($model && $model->getIsStruct())
-                {
-                    if(!array_key_exists($model->getName(),$structsToGenerateDone))
+                while ($model && $model->getIsStruct()) {
+                    if (!array_key_exists($model->getName(), $structsToGenerateDone)) {
                         $structsToGenerateDone[$model->getName()] = 1;
-                    else
+                    } else {
                         $structsToGenerateDone[$model->getName()]++;
+                    }
                     $model = WsdlToPhpModel::getModelByName($model->getInheritance());
                 }
             }
@@ -901,24 +913,26 @@ class WsdlToPhpGenerator extends SoapClient
             arsort($structsToGenerateDone);
             $structTmp = $structs;
             $structs = array();
-            foreach(array_keys($structsToGenerateDone) as $structName)
+            foreach (array_keys($structsToGenerateDone) as $structName) {
                 $structs[$structName] = $structTmp[$structName];
-            unset($structTmp,$structsToGenerateDone);
-            foreach($structs as $structName=>$struct)
-            {
-                if(!$struct->getIsStruct())
+            }
+            unset($structTmp, $structsToGenerateDone);
+            foreach ($structs as $structName => $struct) {
+                if (!$struct->getIsStruct()) {
                     continue;
-                $elementFolder = $this->getDirectory($_rootDirectory,$_rootDirectoryRights,$struct);
-                array_push($structsClassesFiles,$structClassFileName = $elementFolder . $struct->getPackagedName() . '.php');
+                }
+                $elementFolder = $this->getDirectory($_rootDirectory, $_rootDirectoryRights, $struct);
+                array_push($structsClassesFiles, $structClassFileName = $elementFolder . $struct->getPackagedName() . '.php');
                 /**
                  * Generates file
                  */
-                self::populateFile($structClassFileName,$struct->getClassDeclaration());
+                self::populateFile($structClassFileName, $struct->getClassDeclaration());
             }
         }
         self::audit('generate_structs');
         return $structsClassesFiles;
     }
+
     /**
      * Initialize functions :
      * - Get structs defined
@@ -933,79 +947,70 @@ class WsdlToPhpGenerator extends SoapClient
     {
         self::auditInit('init_services');
         $functions = $this->__getFunctions();
-        if(is_array($functions) && count($functions))
-        {
-            foreach($functions as $function)
-            {
-                $infos = explode(' ',$function);
+        if (is_array($functions) && count($functions)) {
+            foreach ($functions as $function) {
+                $infos = explode(' ', $function);
                 /**
                  * "Regular" SOAP Style
                  */
-                if(count($infos) <= 3)
-                {
+                if (count($infos) <= 3) {
                     $returnType = $infos[0];
-                    if(count($infos) < 3 && strpos($infos[1],'()') !== false && array_key_exists(1,$infos))
-                    {
-                        $methodName = trim(str_replace('()','',$infos[1]));
+                    if (count($infos) < 3 && strpos($infos[1], '()') !== false && array_key_exists(1, $infos)) {
+                        $methodName = trim(str_replace('()', '', $infos[1]));
                         $parameterType = null;
+                    } else {
+                        list($methodName, $parameterType) = explode('(', $infos[1]);
                     }
-                    else
-                        list($methodName,$parameterType) = explode('(',$infos[1]);
-                    if(!empty($returnType) && !empty($methodName))
-                        $this->addService($methodName,$parameterType,$returnType);
-                }
-                /**
+                    if (!empty($returnType) && !empty($methodName)) {
+                        $this->addService($methodName, $parameterType, $returnType);
+                    }
+                } /**
                  * RPC SOAP Style
                  */
-                elseif(count($infos) > 3)
-                {
+                elseif (count($infos) > 3) {
                     /**
                      * Some RPC WS defines the return type as a list of values
                      * So we define the return type as an array and reset the informations to use to extract method name and parameters
                      */
-                    if(stripos($infos[0],'list(') === 0)
-                    {
-                        $infos = explode(' ',preg_replace('/(list\(.*\)\s)/i','',$function));
-                        array_unshift($infos,'array');
+                    if (stripos($infos[0], 'list(') === 0) {
+                        $infos = explode(' ', preg_replace('/(list\(.*\)\s)/i', '', $function));
+                        array_unshift($infos, 'array');
                     }
                     /**
                      * Returns type is not defined in some case
                      */
-                    $returnType = strpos($infos[0],'(') === false?$infos[0]:'';
-                    if(empty($returnType) && strpos($infos[0],'(') !== false)
-                    {
+                    $returnType = strpos($infos[0], '(') === false ? $infos[0] : '';
+                    if (empty($returnType) && strpos($infos[0], '(') !== false) {
                         $start = 1;
-                        list($methodName,$firstParameterType) = explode('(',$infos[0]);
-                    }
-                    elseif(strpos($infos[1],'(') !== false)
-                    {
+                        list($methodName, $firstParameterType) = explode('(', $infos[0]);
+                    } elseif (strpos($infos[1], '(') !== false) {
                         $start = 2;
-                        list($methodName,$firstParameterType) = explode('(',$infos[1]);
+                        list($methodName, $firstParameterType) = explode('(', $infos[1]);
                     }
-                    if(!empty($methodName))
-                    {
+                    if (!empty($methodName)) {
                         $methodParameters = array();
                         $infosCount = count($infos);
-                        for($i = $start;$i < $infosCount;$i += 2)
-                        {
+                        for ($i = $start; $i < $infosCount; $i += 2) {
                             $info = str_replace(array(
-                                                    ',',
-                                                    '(',
-                                                    ')',
-                                                    '$'),'',trim($infos[$i]));
-                            if(!empty($info))
-                                $methodParameters = array_merge($methodParameters,array(
-                                                                                        $info=>$i == $start?$firstParameterType:$infos[$i - 1]));
+                                ',',
+                                '(',
+                                ')',
+                                '$'), '', trim($infos[$i]));
+                            if (!empty($info)) {
+                                $methodParameters = array_merge($methodParameters, array(
+                                    $info => $i == $start ? $firstParameterType : $infos[$i - 1]));
+                            }
                         }
-                        $this->addService($methodName,$methodParameters,empty($returnType)?'unknown':$returnType);
+                        $this->addService($methodName, $methodParameters, empty($returnType) ? 'unknown' : $returnType);
                     }
                 }
             }
             return self::audit('init_services');
-        }
-        else
+        } else {
             return !self::audit('init_services');
+        }
     }
+
     /**
      * Generates methods by class
      * @uses WsdlToPhpGenerator::getServices()
@@ -1019,26 +1024,25 @@ class WsdlToPhpGenerator extends SoapClient
      * @param int $_rootDirectoryRights the directory permissions
      * @return array the absolute paths to the generated files
      */
-    private function generateServicesClasses($_rootDirectory,$_rootDirectoryRights)
+    private function generateServicesClasses($_rootDirectory, $_rootDirectoryRights)
     {
         self::auditInit('generate_services');
         $services = $this->getServices();
         $servicesClassesFiles = array();
-        if(count($services))
-        {
-            foreach($services as $service)
-            {
-                $elementFolder = $this->getDirectory($_rootDirectory,$_rootDirectoryRights,$service);
-                array_push($servicesClassesFiles,$serviceClassFileName = $elementFolder . $service->getPackagedName() . '.php');
+        if (count($services)) {
+            foreach ($services as $service) {
+                $elementFolder = $this->getDirectory($_rootDirectory, $_rootDirectoryRights, $service);
+                array_push($servicesClassesFiles, $serviceClassFileName = $elementFolder . $service->getPackagedName() . '.php');
                 /**
                  * Generates file
                  */
-                self::populateFile($serviceClassFileName,$service->getClassDeclaration());
+                self::populateFile($serviceClassFileName, $service->getClassDeclaration());
             }
         }
         self::audit('generate_services');
         return $servicesClassesFiles;
     }
+
     /**
      * Populate the php file with the object and the declarations
      * @uses WsdlToPhpModel::cleanComment()
@@ -1048,44 +1052,41 @@ class WsdlToPhpGenerator extends SoapClient
      * @param array $_declarations the lines of code and comments
      * @return void
      */
-    private static function populateFile($_fileName,array $_declarations)
+    private static function populateFile($_fileName, array $_declarations)
     {
         self::auditInit('populate');
         $content = array(
-                        '<?php');
+            '<?php');
         $indentationString = "    ";
         $indentationLevel = 0;
-        foreach($_declarations as $declaration)
-        {
-            if(is_array($declaration) && array_key_exists('comment',$declaration) && is_array($declaration['comment']))
-            {
-                array_push($content,str_repeat($indentationString,$indentationLevel) . '/**');
-                foreach($declaration['comment'] as $subComment)
-                    array_push($content,str_repeat($indentationString,$indentationLevel) . ' * ' . WsdlToPhpModel::cleanComment($subComment));
-                array_push($content,str_repeat($indentationString,$indentationLevel) . ' */');
-            }
-            elseif(is_string($declaration))
-            {
-                switch($declaration)
-                {
+        foreach ($_declarations as $declaration) {
+            if (is_array($declaration) && array_key_exists('comment', $declaration) && is_array($declaration['comment'])) {
+                array_push($content, str_repeat($indentationString, $indentationLevel) . '/**');
+                foreach ($declaration['comment'] as $subComment) {
+                    array_push($content, str_repeat($indentationString, $indentationLevel) . ' * ' . WsdlToPhpModel::cleanComment($subComment));
+                }
+                array_push($content, str_repeat($indentationString, $indentationLevel) . ' */');
+            } elseif (is_string($declaration)) {
+                switch ($declaration) {
                     case '{':
-                        array_push($content,str_repeat($indentationString,$indentationLevel) . $declaration);
+                        array_push($content, str_repeat($indentationString, $indentationLevel) . $declaration);
                         $indentationLevel++;
                         break;
                     case '}':
                         $indentationLevel--;
-                        array_push($content,str_repeat($indentationString,$indentationLevel) . $declaration);
+                        array_push($content, str_repeat($indentationString, $indentationLevel) . $declaration);
                         break;
                     default:
-                        array_push($content,str_repeat($indentationString,$indentationLevel) . $declaration);
+                        array_push($content, str_repeat($indentationString, $indentationLevel) . $declaration);
                         break;
                 }
             }
         }
-        array_push($content,str_repeat($indentationString,$indentationLevel));
-        file_put_contents($_fileName,implode("\n",$content));
-        self::audit('populate',$_fileName);
+        array_push($content, str_repeat($indentationString, $indentationLevel));
+        file_put_contents($_fileName, implode("\n", $content));
+        self::audit('populate', $_fileName);
     }
+
     /**
      * Generates classMap class
      * @uses WsdlToPhpGenerator::getStructs()
@@ -1107,64 +1108,65 @@ class WsdlToPhpGenerator extends SoapClient
          * class map comments
          */
         $comments = array();
-        array_push($comments,'File for the class which returns the class map definition');
-        array_push($comments,'@package ' . self::getPackageName());
-        if(count(self::getOptionAddComments()))
-        {
-            foreach(self::getOptionAddComments() as $tagName=>$tagValue)
-                array_push($comments,"@$tagName $tagValue");
+        array_push($comments, 'File for the class which returns the class map definition');
+        array_push($comments, '@package ' . self::getPackageName());
+        if (count(self::getOptionAddComments())) {
+            foreach (self::getOptionAddComments() as $tagName => $tagValue) {
+                array_push($comments, "@$tagName $tagValue");
+            }
         }
-        array_push($classMapDeclaration,array(
-                                            'comment'=>$comments));
+        array_push($classMapDeclaration, array(
+            'comment' => $comments));
         $comments = array();
-        array_push($comments,'Class which returns the class map definition by the static method ' . self::getPackageName() . 'ClassMap::classMap()');
-        array_push($comments,'@package ' . self::getPackageName());
-        if(count(self::getOptionAddComments()))
-        {
-            foreach(self::getOptionAddComments() as $tagName=>$tagValue)
-                array_push($comments,"@$tagName $tagValue");
+        array_push($comments, 'Class which returns the class map definition by the static method ' . self::getPackageName() . 'ClassMap::classMap()');
+        array_push($comments, '@package ' . self::getPackageName());
+        if (count(self::getOptionAddComments())) {
+            foreach (self::getOptionAddComments() as $tagName => $tagValue) {
+                array_push($comments, "@$tagName $tagValue");
+            }
         }
-        array_push($classMapDeclaration,array(
-                                            'comment'=>$comments));
+        array_push($classMapDeclaration, array(
+            'comment' => $comments));
         /**
          * class map declaration
          */
-        array_push($classMapDeclaration,'class ' . self::getPackageName() . 'ClassMap');
-        array_push($classMapDeclaration,'{');
+        array_push($classMapDeclaration, 'class ' . self::getPackageName() . 'ClassMap');
+        array_push($classMapDeclaration, '{');
         /**
          * classMap() method comments
          */
         $comments = array();
-        array_push($comments,'This method returns the array containing the mapping between WSDL structs and generated classes');
-        array_push($comments,'This array is sent to the SoapClient when calling the WS');
-        array_push($comments,'@return array');
-        array_push($classMapDeclaration,array(
-                                            'comment'=>$comments));
+        array_push($comments, 'This method returns the array containing the mapping between WSDL structs and generated classes');
+        array_push($comments, 'This array is sent to the SoapClient when calling the WS');
+        array_push($comments, '@return array');
+        array_push($classMapDeclaration, array(
+            'comment' => $comments));
         /**
          * classMap() method body
          */
-        array_push($classMapDeclaration,'final public static function classMap()');
-        array_push($classMapDeclaration,'{');
+        array_push($classMapDeclaration, 'final public static function classMap()');
+        array_push($classMapDeclaration, '{');
         $structs = $this->getStructs();
         $classesToMap = array();
-        foreach($structs as $struct)
-        {
-            if($struct->getIsStruct())
+        foreach ($structs as $struct) {
+            if ($struct->getIsStruct()) {
                 $classesToMap[$struct->getName()] = $struct->getPackagedName();
+            }
         }
         ksort($classesToMap);
-        array_push($classMapDeclaration,'return ' . var_export($classesToMap,true) . ';');
-        array_push($classMapDeclaration,'}');
-        array_push($classMapDeclaration,'}');
+        array_push($classMapDeclaration, 'return ' . var_export($classesToMap, true) . ';');
+        array_push($classMapDeclaration, '}');
+        array_push($classMapDeclaration, '}');
         /**
          * Generates file
          */
-        self::populateFile($filename = $_rootDirectory . self::getPackageName() . 'ClassMap.php',$classMapDeclaration);
-        unset($comments,$classMapDeclaration,$structs,$classesToMap);
+        self::populateFile($filename = $_rootDirectory . self::getPackageName() . 'ClassMap.php', $classMapDeclaration);
+        unset($comments, $classMapDeclaration, $structs, $classesToMap);
         self::audit('generate_classmap');
         return array(
-                    $filename);
+            $filename);
     }
+
     /**
      * Generates autoload file for all classes.
      * The classes are loaded automatically in order of their dependency regarding their inheritance (defined in WsdlToPhpGenerate::generateStructsClasses() method).
@@ -1177,41 +1179,41 @@ class WsdlToPhpGenerator extends SoapClient
      * @param array $_classesFiles the generated classes files
      * @return void
      */
-    private static function generateAutoloadFile($_rootDirectory,array $_classesFiles = array())
+    private static function generateAutoloadFile($_rootDirectory, array $_classesFiles = array())
     {
-        if(count($_classesFiles))
-        {
+        if (count($_classesFiles)) {
             self::auditInit('generate_autoload');
             $autoloadDeclaration = array();
             $comments = array();
-            array_push($comments,'File to load generated classes once at once time');
-            array_push($comments,'@package ' . self::getPackageName());
-            if(count(self::getOptionAddComments()))
-            {
-                foreach(self::getOptionAddComments() as $tagName=>$tagValue)
-                    array_push($comments,"@$tagName $tagValue");
+            array_push($comments, 'File to load generated classes once at once time');
+            array_push($comments, '@package ' . self::getPackageName());
+            if (count(self::getOptionAddComments())) {
+                foreach (self::getOptionAddComments() as $tagName => $tagValue) {
+                    array_push($comments, "@$tagName $tagValue");
+                }
             }
-            array_push($autoloadDeclaration,array(
-                                                'comment'=>$comments));
+            array_push($autoloadDeclaration, array(
+                'comment' => $comments));
             $comments = array();
-            array_push($comments,'Includes for all generated classes files');
-            if(count(self::getOptionAddComments()))
-            {
-                foreach(self::getOptionAddComments() as $tagName=>$tagValue)
-                    array_push($comments,"@$tagName $tagValue");
+            array_push($comments, 'Includes for all generated classes files');
+            if (count(self::getOptionAddComments())) {
+                foreach (self::getOptionAddComments() as $tagName => $tagValue) {
+                    array_push($comments, "@$tagName $tagValue");
+                }
             }
-            array_push($autoloadDeclaration,array(
-                                                'comment'=>$comments));
-            foreach($_classesFiles as $classFile)
-            {
-                if(is_file($classFile))
-                    array_push($autoloadDeclaration,'require_once ' . str_replace($_rootDirectory,'dirname(__FILE__) . \'/',$classFile) . '\';');
+            array_push($autoloadDeclaration, array(
+                'comment' => $comments));
+            foreach ($_classesFiles as $classFile) {
+                if (is_file($classFile)) {
+                    array_push($autoloadDeclaration, 'require_once ' . str_replace($_rootDirectory, 'dirname(__FILE__) . \'/', $classFile) . '\';');
+                }
             }
-            self::populateFile($_rootDirectory . '/' . self::getPackageName() . 'Autoload.php',$autoloadDeclaration);
-            unset($autoloadDeclaration,$comments);
+            self::populateFile($_rootDirectory . '/' . self::getPackageName() . 'Autoload.php', $autoloadDeclaration);
+            unset($autoloadDeclaration, $comments);
             self::audit('generate_autoload');
         }
     }
+
     /**
      * Generates Wsdl Class file
      * @uses WsdlToPhpGenerator::getPackageName()
@@ -1223,61 +1225,65 @@ class WsdlToPhpGenerator extends SoapClient
      */
     private function generateWsdlClassFile($_rootDirectory)
     {
-        if(is_file(dirname(__FILE__) . '/WsdlClassFileTpl.php'))
-        {
+        if (is_file(dirname(__FILE__) . '/WsdlClassFileTpl.php')) {
             self::auditInit('generate_wsdlclass');
             /**
              * Adds additional PHP doc block tags if needed to the two main PHP doc block
              */
-            if(count(self::getOptionAddComments()))
-            {
+            if (count(self::getOptionAddComments())) {
                 $file = file(dirname(__FILE__) . '/WsdlClassFileTpl.php');
                 $content = array();
                 $counter = 2;
-                foreach($file as $line)
-                {
-                    if(empty($line))
+                foreach ($file as $line) {
+                    if (empty($line)) {
                         continue;
-                    if(strpos($line,' */') === 0 && $counter)
-                    {
-                        foreach(self::getOptionAddComments() as $tagName=>$tagValue)
-                            array_push($content," * @$tagName $tagValue\n");
+                    }
+                    if (strpos($line, ' */') === 0 && $counter) {
+                        foreach (self::getOptionAddComments() as $tagName => $tagValue) {
+                            array_push($content, " * @$tagName $tagValue\n");
+                        }
                         $counter--;
                     }
-                    array_push($content,$line);
+                    array_push($content, $line);
                 }
-                $content = implode('',$content);
-            }
-            else
+                $content = implode('', $content);
+            } else {
                 $content = file_get_contents(dirname(__FILE__) . '/WsdlClassFileTpl.php');
+            }
             $metaInformation = '';
-            foreach($this->wsdls as $wsdlinfos)
-            {
-                foreach($wsdlinfos['meta'] as $metaName=>$metaValue)
-                {
+            foreach ($this->wsdls as $wsdlinfos) {
+                foreach ($wsdlinfos['meta'] as $metaName => $metaValue) {
                     $metaValueCleaned = WsdlToPhpModel::cleanComment($metaValue);
-                    if($metaValueCleaned === '')
+                    if ($metaValueCleaned === '') {
                         continue;
-                    $metaInformation .= (!empty($metaInformation)?"\n * ":'') . ucfirst($metaName) . " : $metaValueCleaned";
+                    }
+                    $metaInformation .= (!empty($metaInformation) ? "\n * " : '') . ucfirst($metaName) . " : $metaValueCleaned";
                 }
             }
             $content = str_replace(array(
-                                        'packageName',
-                                        'PackageName',
-                                        'meta_informations',
-                                        "'wsdl_url_value'"),array(
-                                                                lcfirst(self::getPackageName(false)),
-                                                                self::getPackageName(),
-                                                                $metaInformation,
-                                                                var_export(self::getWsdl(0),true)),$content);
-            file_put_contents($_rootDirectory . self::getPackageName() . 'WsdlClass.php',$content);
+                'packageName',
+                'PackageName',
+                'meta_informations',
+                "'wsdl_url_value'",
+                "\"%urlFromConfig%\"",
+                "\"%encoding%\""
+            ), array(
+                lcfirst(self::getPackageName(false)),
+                self::getPackageName(),
+                $metaInformation,
+                var_export(self::getWsdl(0), true),
+                empty($this->urlFromConfig) ? var_export(self::getWsdl(0), true) : $this->urlFromConfig,
+                $this->enconding ? ('"' . $this->enconding . '"') : "null"
+            ), $content);
+            file_put_contents($_rootDirectory . self::getPackageName() . 'WsdlClass.php', $content);
             self::audit('generate_wsdlclass');
             return array(
-                        $_rootDirectory . self::getPackageName() . 'WsdlClass.php');
-        }
-        else
+                $_rootDirectory . self::getPackageName() . 'WsdlClass.php');
+        } else {
             return array();
+        }
     }
+
     /**
      * Generates tutorial file
      * @uses WsdlToPhpGenerator::getOptionGenerateAutoloadFile()
@@ -1293,73 +1299,65 @@ class WsdlToPhpGenerator extends SoapClient
      * @param array $_functionsClassesFiles the generated class files
      * @return bool true|false
      */
-    private function generateTutorialFile($_rootDirectory,array $_functionsClassesFiles = array())
+    private function generateTutorialFile($_rootDirectory, array $_functionsClassesFiles = array())
     {
-        if(class_exists('ReflectionClass') && count($_functionsClassesFiles) && is_file(dirname(__FILE__) . '/sample-tpl.php') && self::getOptionGenerateAutoloadFile() && is_file($_rootDirectory . '/' . self::getPackageName() . 'Autoload.php'))
-        {
+        if (class_exists('ReflectionClass') && count($_functionsClassesFiles) && is_file(dirname(__FILE__) . '/sample-tpl.php') && self::getOptionGenerateAutoloadFile() && is_file($_rootDirectory . '/' . self::getPackageName() . 'Autoload.php')) {
             self::auditInit('generate_tutorial');
             require_once $_rootDirectory . '/' . self::getPackageName() . 'Autoload.php';
             $content = '';
-            foreach($_functionsClassesFiles as $classFilePath)
-            {
+            foreach ($_functionsClassesFiles as $classFilePath) {
                 $pathinfo = pathinfo($classFilePath);
-                $className = str_replace('.' . $pathinfo['extension'],'',$pathinfo['filename']);
-                if(class_exists($className))
-                {
+                $className = str_replace('.' . $pathinfo['extension'], '', $pathinfo['filename']);
+                if (class_exists($className)) {
                     $r = new ReflectionClass($className);
                     $methods = $r->getMethods();
                     $classMethods = array();
-                    foreach($methods as $method)
-                    {
-                        if($method->class === $className && !in_array($method->getName(),array(
-                                                                                                '__toString',
-                                                                                                '__construct',
-                                                                                                'getResult')))
-                            array_push($classMethods,$method);
+                    foreach ($methods as $method) {
+                        if ($method->class === $className && !in_array($method->getName(), array(
+                                '__toString',
+                                '__construct',
+                                'getResult'))
+                        ) {
+                            array_push($classMethods, $method);
+                        }
                     }
-                    if(count($classMethods))
-                    {
+                    if (count($classMethods)) {
                         $classNameVar = lcfirst($className);
-                        $content .= "\n\n/**" . str_repeat('*',strlen("Example for $className")) . "\n * Example for $className\n */";
+                        $content .= "\n\n/**" . str_repeat('*', strlen("Example for $className")) . "\n * Example for $className\n */";
                         $content .= "\n\$$classNameVar = new $className();";
-                        foreach($classMethods as $classMethod)
-                        {
+                        foreach ($classMethods as $classMethod) {
                             $content .= "\n// sample call for $className::" . $classMethod->getName() . '()';
                             $methodDoComment = $classMethod->getDocComment();
                             $methodParameters = $classMethod->getParameters();
                             $methodParametersCount = count($methodParameters);
-                            $isSetSoapHeaderMethod = (strpos($classMethod->getName(),'setSoapHeader') === 0 && strlen($classMethod->getName()) > strlen('setSoapHeader'));
-                            $end = $isSetSoapHeaderMethod?1:$methodParametersCount;
+                            $isSetSoapHeaderMethod = (strpos($classMethod->getName(), 'setSoapHeader') === 0 && strlen($classMethod->getName()) > strlen('setSoapHeader'));
+                            $end = $isSetSoapHeaderMethod ? 1 : $methodParametersCount;
                             $parameters = array();
-                            for($i = 0;$i < $end;$i++)
-                            {
+                            for ($i = 0; $i < $end; $i++) {
                                 $methodParameter = $methodParameters[$i];
                                 /**
                                  * Remove first _
                                  */
-                                $methodParameterName = substr($methodParameter->getName(),1);
+                                $methodParameterName = substr($methodParameter->getName(), 1);
                                 /**
                                  * Retrieve parameter type based on the method doc comment
                                  */
                                 $matches = array();
-                                preg_match('/\@param\s(.*)\s\$_' . $methodParameterName . '\n/',$methodDoComment,$matches);
-                                $methodParameterType = (array_key_exists(1,$matches) && class_exists($matches[1]))?ucfirst($matches[1]):null;
-                                array_push($parameters,!empty($methodParameterType)?"new $methodParameterType(/*** update parameters list ***/)":"\$_$methodParameterName");
+                                preg_match('/\@param\s(.*)\s\$_' . $methodParameterName . '\n/', $methodDoComment, $matches);
+                                $methodParameterType = (array_key_exists(1, $matches) && class_exists($matches[1])) ? ucfirst($matches[1]) : null;
+                                array_push($parameters, !empty($methodParameterType) ? "new $methodParameterType(/*** update parameters list ***/)" : "\$_$methodParameterName");
                             }
                             /**
                              * setSoapHeader call
                              */
-                            if($isSetSoapHeaderMethod)
-                            {
+                            if ($isSetSoapHeaderMethod) {
                                 $content .= " in order to initialize required SoapHeader";
-                                $content .= "\n\$$classNameVar->" . $classMethod->getName() . '(' . implode(',',$parameters) . ');';
-                            }
-                            /**
+                                $content .= "\n\$$classNameVar->" . $classMethod->getName() . '(' . implode(',', $parameters) . ');';
+                            } /**
                              * Operation call
                              */
-                            else
-                            {
-                                $content .= "\nif(\$$classNameVar->" . $classMethod->getName() . '(' . implode(',',$parameters) . '))';
+                            else {
+                                $content .= "\nif(\$$classNameVar->" . $classMethod->getName() . '(' . implode(',', $parameters) . '))';
                                 $content .= "\n    " . 'print_r($' . $classNameVar . '->getResult());';
                                 $content .= "\nelse";
                                 $content .= "\n    print_r($" . $classNameVar . "->getLastError());";
@@ -1368,55 +1366,52 @@ class WsdlToPhpGenerator extends SoapClient
                     }
                 }
             }
-            if(!empty($content))
-            {
+            if (!empty($content)) {
                 /**
                  * Adds additional PHP doc block tags if needed to the one main PHP doc block
                  */
-                if(count(self::getOptionAddComments()))
-                {
+                if (count(self::getOptionAddComments())) {
                     $file = file(dirname(__FILE__) . '/sample-tpl.php');
                     $fileContent = array();
                     $counter = 1;
-                    foreach($file as $line)
-                    {
-                        if(empty($line))
+                    foreach ($file as $line) {
+                        if (empty($line)) {
                             continue;
-                        if(strpos($line,' */') === 0 && $counter)
-                        {
-                            foreach(self::getOptionAddComments() as $tagName=>$tagValue)
-                                array_push($fileContent," * @$tagName $tagValue\n");
+                        }
+                        if (strpos($line, ' */') === 0 && $counter) {
+                            foreach (self::getOptionAddComments() as $tagName => $tagValue) {
+                                array_push($fileContent, " * @$tagName $tagValue\n");
+                            }
                             $counter--;
                         }
-                        array_push($fileContent,$line);
+                        array_push($fileContent, $line);
                     }
-                    $fileContent = implode('',$fileContent);
-                }
-                else
+                    $fileContent = implode('', $fileContent);
+                } else {
                     $fileContent = file_get_contents(dirname(__FILE__) . '/sample-tpl.php');
+                }
                 $fileContent = str_replace(array(
-                                                'packageName',
-                                                'PackageName',
-                                                'PACKAGENAME',
-                                                'WSDL_PATH',
-                                                '$content;'),array(
-                                                                lcfirst(self::getPackageName()),
-                                                                ucfirst(self::getPackageName()),
-                                                                strtoupper(self::getPackageName()),
-                                                                var_export($this->getWsdl(0),true),
-                                                                $content),$fileContent);
-                file_put_contents($_rootDirectory . 'sample-' . strtolower(self::getPackageName()) . '.php',$fileContent);
+                    'packageName',
+                    'PackageName',
+                    'PACKAGENAME',
+                    'WSDL_PATH',
+                    '$content;'), array(
+                    lcfirst(self::getPackageName()),
+                    ucfirst(self::getPackageName()),
+                    strtoupper(self::getPackageName()),
+                    var_export($this->getWsdl(0), true),
+                    $content), $fileContent);
+                file_put_contents($_rootDirectory . 'sample-' . strtolower(self::getPackageName()) . '.php', $fileContent);
             }
             self::audit('generate_tutorial');
             return true;
-        }
-        elseif(!class_exists('ReflectionClass'))
-        {
+        } elseif (!class_exists('ReflectionClass')) {
             echo "\n WsdlToPhpGenerator::generateTutorialFile() needs ReflectionClass, see http://fr2.php.net/manual/fr/class.reflectionclass.php\n";
             return false;
         }
         return false;
     }
+
     /**
      * Returns the structs
      * @return array
@@ -1425,6 +1420,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return $this->structs;
     }
+
     /**
      * Sets the structs
      * @param array
@@ -1434,6 +1430,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return ($this->structs = $_structs);
     }
+
     /**
      * Gets the struct by its name
      * @uses WsdlToPhpGenerator::getStructs()
@@ -1442,8 +1439,9 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public function getStruct($_structName)
     {
-        return array_key_exists($_structName,$this->getStructs())?$this->structs[$_structName]:null;
+        return array_key_exists($_structName, $this->getStructs()) ? $this->structs[$_structName] : null;
     }
+
     /**
      * Adds type to structs
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1453,13 +1451,16 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_attributeType the attribute type
      * @return void
      */
-    private function addStruct($_structName,$_attributeName,$_attributeType)
+    private function addStruct($_structName, $_attributeName, $_attributeType)
     {
-        if($this->getStruct($_structName) === null)
+        if ($this->getStruct($_structName) === null) {
             $this->structs[$_structName] = new WsdlToPhpStruct($_structName);
-        if(!empty($_attributeName) && !empty($_attributeType))
-            $this->getStruct($_structName)->addAttribute($_attributeName,$_attributeType);
+        }
+        if (!empty($_attributeName) && !empty($_attributeType)) {
+            $this->getStruct($_structName)->addAttribute($_attributeName, $_attributeType);
+        }
     }
+
     /**
      * Adds an info to the struct
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1469,11 +1470,13 @@ class WsdlToPhpGenerator extends SoapClient
      * @param mixed $_structInfoValue the struct info value
      * @return void
      */
-    private function addStructMeta($_structName,$_structInfoName,$_structInfoValue)
+    private function addStructMeta($_structName, $_structInfoName, $_structInfoValue)
     {
-        if($this->getStruct($_structName))
-            $this->getStruct($_structName)->addMeta($_structInfoName,$_structInfoValue);
+        if ($this->getStruct($_structName)) {
+            $this->getStruct($_structName)->addMeta($_structInfoName, $_structInfoValue);
+        }
     }
+
     /**
      * Sets struct inheritance value
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1482,11 +1485,13 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string the struct inheritance name
      * @return void
      */
-    private function setStructInheritance($_structName,$_inherits)
+    private function setStructInheritance($_structName, $_inherits)
     {
-        if($this->getStruct($_structName))
+        if ($this->getStruct($_structName)) {
             $this->getStruct($_structName)->setInheritance($_inherits);
+        }
     }
+
     /**
      * Adds struct documentation info
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1495,11 +1500,13 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_documentation the struct documentation
      * @return void
      */
-    private function setStructDocumentation($_structName,$_documentation)
+    private function setStructDocumentation($_structName, $_documentation)
     {
-        if($this->getStruct($_structName))
+        if ($this->getStruct($_structName)) {
             $this->getStruct($_structName)->setDocumentation($_documentation);
+        }
     }
+
     /**
      * Sets the struct as a restriction, which means it contains the enumeration values
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1509,9 +1516,11 @@ class WsdlToPhpGenerator extends SoapClient
      */
     private function setStructIsRestriction($_structName)
     {
-        if($this->getStruct($_structName))
+        if ($this->getStruct($_structName)) {
             $this->getStruct($_structName)->setIsRestriction(true);
+        }
     }
+
     /**
      * Sets the struct as a srtuct, which means it has to be generated as a class
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1521,9 +1530,11 @@ class WsdlToPhpGenerator extends SoapClient
      */
     private function setStructIsStruct($_structName)
     {
-        if($this->getStruct($_structName))
+        if ($this->getStruct($_structName)) {
             $this->getStruct($_structName)->setIsStruct(true);
+        }
     }
+
     /**
      * Gets the struct by its name
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1532,10 +1543,11 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_attributeName the attribute name
      * @return WsdlToPhpStructAttribute|null
      */
-    public function getStructAttribute($_structName,$_attributeName)
+    public function getStructAttribute($_structName, $_attributeName)
     {
-        return $this->getStruct($_structName)?$this->getStruct($_structName)->getAttribute($_attributeName):null;
+        return $this->getStruct($_structName) ? $this->getStruct($_structName)->getAttribute($_attributeName) : null;
     }
+
     /**
      * Adds an info to the struct attribute
      * @uses WsdlToPhpGenerator::getStructAttribute()
@@ -1546,11 +1558,13 @@ class WsdlToPhpGenerator extends SoapClient
      * @param mixed $_attributeInfoValue the attribute info value
      * @return void
      */
-    private function addStructAttributeMeta($_structName,$_attributeName,$_attributeInfoName,$_attributeInfoValue)
+    private function addStructAttributeMeta($_structName, $_attributeName, $_attributeInfoName, $_attributeInfoValue)
     {
-        if($this->getStructAttribute($_structName,$_attributeName))
-            $this->getStructAttribute($_structName,$_attributeName)->addMeta($_attributeInfoName,$_attributeInfoValue);
+        if ($this->getStructAttribute($_structName, $_attributeName)) {
+            $this->getStructAttribute($_structName, $_attributeName)->addMeta($_attributeInfoName, $_attributeInfoValue);
+        }
     }
+
     /**
      * Adds struct documentation info
      * @uses WsdlToPhpGenerator::getStructAttribute()
@@ -1560,11 +1574,13 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_documentation the attribute documentation
      * @return void
      */
-    private function setStructAttributeDocumentation($_structName,$_attributeName,$_documentation)
+    private function setStructAttributeDocumentation($_structName, $_attributeName, $_documentation)
     {
-        if($this->getStructAttribute($_structName,$_attributeName))
-            $this->getStructAttribute($_structName,$_attributeName)->setDocumentation($_documentation);
+        if ($this->getStructAttribute($_structName, $_attributeName)) {
+            $this->getStructAttribute($_structName, $_attributeName)->setDocumentation($_documentation);
+        }
     }
+
     /**
      * Gets the struct value by its name
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1573,10 +1589,11 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_valueName the value name
      * @return WsdlToPhpStructValue|null
      */
-    public function getStructValue($_structName,$_valueName)
+    public function getStructValue($_structName, $_valueName)
     {
-        return $this->getStruct($_structName)?$this->getStruct($_structName)->getValue($_valueName):null;
+        return $this->getStruct($_structName) ? $this->getStruct($_structName)->getValue($_valueName) : null;
     }
+
     /**
      * Adds value to restriction struct
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1587,15 +1604,15 @@ class WsdlToPhpGenerator extends SoapClient
      * @param mixed $_value the value
      * @return void
      */
-    private function addRestrictionValue($_structName,$_value)
+    private function addRestrictionValue($_structName, $_value)
     {
-        if($this->getStruct($_structName))
-        {
+        if ($this->getStruct($_structName)) {
             $this->setStructIsRestriction($_structName);
             $this->setStructIsStruct($_structName);
             $this->getStruct($_structName)->addValue($_value);
         }
     }
+
     /**
      * Adds struct value documentation info
      * @uses WsdlToPhpGenerator::getStructValue()
@@ -1605,11 +1622,13 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_documentation the value documentation
      * @return void
      */
-    private function setStructValueDocumentation($_structName,$_valueName,$_documentation)
+    private function setStructValueDocumentation($_structName, $_valueName, $_documentation)
     {
-        if($this->getStructValue($_structName,$_valueName))
-            $this->getStructValue($_structName,$_valueName)->setDocumentation($_documentation);
+        if ($this->getStructValue($_structName, $_valueName)) {
+            $this->getStructValue($_structName, $_valueName)->setDocumentation($_documentation);
+        }
     }
+
     /**
      * Adds a virtual struct
      * @uses WsdlToPhpGenerator::getStruct()
@@ -1618,9 +1637,11 @@ class WsdlToPhpGenerator extends SoapClient
      */
     private function addVirtualStruct($_structName)
     {
-        if($this->getStruct($_structName) === null)
-            $this->structs[$_structName] = new WsdlToPhpStruct($_structName,false);
+        if ($this->getStruct($_structName) === null) {
+            $this->structs[$_structName] = new WsdlToPhpStruct($_structName, false);
+        }
     }
+
     /**
      * Returns the services
      * @return array
@@ -1629,6 +1650,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return $this->services;
     }
+
     /**
      * Sets the services
      * @param array
@@ -1638,6 +1660,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return ($this->services = $_services);
     }
+
     /**
      * Adds a service
      * @uses WsdlToPhpGenerator::getServiceName()
@@ -1650,28 +1673,30 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_functionReturn the original return name
      * @return void
      */
-    private function addService($_functionName,$_functionParameter,$_functionReturn)
+    private function addService($_functionName, $_functionParameter, $_functionReturn)
     {
         $serviceName = $this->getServiceName($_functionName);
-        if(!$this->getService($serviceName))
+        if (!$this->getService($serviceName)) {
             $this->services[$serviceName] = new WsdlToPhpService($serviceName);
+        }
         $serviceFunction = $this->getServiceFunction($_functionName);
         /**
          * Service function does not already exist, register it
          */
-        if(!$serviceFunction)
-            $this->getService($serviceName)->addFunction($_functionName,$_functionParameter,$_functionReturn);
-        /**
+        if (!$serviceFunction) {
+            $this->getService($serviceName)->addFunction($_functionName, $_functionParameter, $_functionReturn);
+        } /**
          * Service function exists with a different signature, register it too by identifying the service functions as non unique functions
          */
-        elseif($serviceFunction->getParameterType() != $_functionParameter)
-        {
+        elseif ($serviceFunction->getParameterType() != $_functionParameter) {
             $serviceFunction->setIsUnique(false);
-            $sameServiceFunction = $this->getServiceFunction($_functionName,$_functionParameter,$_functionReturn);
-            if($sameServiceFunction === null)
-                $this->getService($serviceName)->addFunction($_functionName,$_functionParameter,$_functionReturn,false);
+            $sameServiceFunction = $this->getServiceFunction($_functionName, $_functionParameter, $_functionReturn);
+            if ($sameServiceFunction === null) {
+                $this->getService($serviceName)->addFunction($_functionName, $_functionParameter, $_functionReturn, false);
+            }
         }
     }
+
     /**
      * Gets a service by its name
      * @param string $_serviceName the service name
@@ -1679,8 +1704,9 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public function getService($_serviceName)
     {
-        return array_key_exists($_serviceName,$this->getServices())?$this->services[$_serviceName]:null;
+        return array_key_exists($_serviceName, $this->getServices()) ? $this->services[$_serviceName] : null;
     }
+
     /**
      * Returns the function
      * @uses WsdlToPhpGenerator::getServiceName()
@@ -1691,10 +1717,11 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_functionReturn the original return name
      * @return WsdlToPhpFunction|null
      */
-    private function getServiceFunction($_functionName,$_functionParameter = null,$_functionReturn = null)
+    private function getServiceFunction($_functionName, $_functionParameter = null, $_functionReturn = null)
     {
-        return $this->getService($this->getServiceName($_functionName))?$this->getService($this->getServiceName($_functionName))->getFunction($_functionName,$_functionParameter,$_functionReturn):null;
+        return $this->getService($this->getServiceName($_functionName)) ? $this->getService($this->getServiceName($_functionName))->getFunction($_functionName, $_functionParameter, $_functionReturn) : null;
     }
+
     /**
      * Sets the service function documentation
      * @uses WsdlToPhpGenerator::getServiceFunction()
@@ -1703,11 +1730,13 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_documentation the documentation
      * @return void
      */
-    private function setServiceFunctionDocumentation($_functionName,$_documentation)
+    private function setServiceFunctionDocumentation($_functionName, $_documentation)
     {
-        if($this->getServiceFunction($_functionName))
+        if ($this->getServiceFunction($_functionName)) {
             $this->getServiceFunction($_functionName)->setDocumentation($_documentation);
+        }
     }
+
     /**
      * Adds the service function a meta information
      * @uses WsdlToPhpGenerator::getServiceFunction()
@@ -1717,11 +1746,13 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_functionInfoValue the function info value
      * @return void
      */
-    private function addServiceFunctionMeta($_functionName,$_functionInfoName,$_functionInfoValue)
+    private function addServiceFunctionMeta($_functionName, $_functionInfoName, $_functionInfoValue)
     {
-        if($this->getServiceFunction($_functionName))
-            $this->getServiceFunction($_functionName)->addMeta($_functionInfoName,$_functionInfoValue);
+        if ($this->getServiceFunction($_functionName)) {
+            $this->getServiceFunction($_functionName)->addMeta($_functionInfoName, $_functionInfoValue);
+        }
     }
+
     /**
      * Sets the optionCategory value
      * @return int
@@ -1730,6 +1761,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionCategory;
     }
+
     /**
      * Sets the optionCategory value
      * Value must be {@link WsdlToPhpGenerator::OPT_CAT_END_NAME} or {@link WsdlToPhpGenerator::OPT_CAT_START_NAME} or {@link WsdlToPhpGenerator::OPT_CAT_NONE_NAME}
@@ -1741,17 +1773,15 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public static function setOptionCategory($_optionCategory = self::OPT_CAT_START_NAME)
     {
-        if($_optionCategory == self::OPT_CAT_END_NAME || $_optionCategory == self::OPT_CAT_START_NAME || $_optionCategory == self::OPT_CAT_NONE_NAME || $_optionCategory == self::OPT_CAT_TYPE)
-        {
+        if ($_optionCategory == self::OPT_CAT_END_NAME || $_optionCategory == self::OPT_CAT_START_NAME || $_optionCategory == self::OPT_CAT_NONE_NAME || $_optionCategory == self::OPT_CAT_TYPE) {
             self::$optionCategory = $_optionCategory;
             return true;
-        }
-        else
-        {
+        } else {
             self::$optionCategory = self::OPT_CAT_START_NAME;
             return false;
         }
     }
+
     /**
      * Sets the optionSubCategory value
      * @return int
@@ -1760,6 +1790,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionSubCategory;
     }
+
     /**
      * Sets the optionSubCategory value
      * Value must be {@link WsdlToPhpGenerator::OPT_SUB_CAT_END_NAME} or {@link WsdlToPhpGenerator::OPT_SUB_CAT_START_NAME} or {@link WsdlToPhpGenerator::OPT_SUB_CAT_NONE_NAME}
@@ -1771,17 +1802,15 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public static function setOptionSubCategory($_optionSubCategory = self::OPT_SUB_CAT_START_NAME)
     {
-        if($_optionSubCategory == self::OPT_SUB_CAT_END_NAME || $_optionSubCategory == self::OPT_SUB_CAT_START_NAME || $_optionSubCategory == self::OPT_SUB_CAT_NONE_NAME)
-        {
+        if ($_optionSubCategory == self::OPT_SUB_CAT_END_NAME || $_optionSubCategory == self::OPT_SUB_CAT_START_NAME || $_optionSubCategory == self::OPT_SUB_CAT_NONE_NAME) {
             self::$optionSubCategory = $_optionSubCategory;
             return true;
-        }
-        else
-        {
+        } else {
             self::$optionSubCategory = self::OPT_SUB_CAT_START_NAME;
             return false;
         }
     }
+
     /**
      * Sets the optionGatherMethods value
      * @return int
@@ -1790,6 +1819,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionGatherMethods;
     }
+
     /**
      * Sets the optionGatherMethods value
      * Value must be {@link WsdlToPhpGenerator::OPT_GATH_METH_START_NAME} or {@link WsdlToPhpGenerator::OPT_GATH_METH_END_NAME}
@@ -1800,17 +1830,15 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public static function setOptionGatherMethods($_optionGatherMethods = self::OPT_GATH_METH_START_NAME)
     {
-        if($_optionGatherMethods == self::OPT_GATH_METH_START_NAME || $_optionGatherMethods == self::OPT_GATH_METH_END_NAME)
-        {
+        if ($_optionGatherMethods == self::OPT_GATH_METH_START_NAME || $_optionGatherMethods == self::OPT_GATH_METH_END_NAME) {
             self::$optionGatherMethods = $_optionGatherMethods;
             return true;
-        }
-        else
-        {
+        } else {
             self::$optionGatherMethods = self::OPT_GATH_METH_START_NAME;
             return false;
         }
     }
+
     /**
      * Gets the optionSendArrayAsParameter value
      * @return bool
@@ -1819,6 +1847,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionSendArrayAsParameter;
     }
+
     /**
      * Sets the optionSendArrayAsParameter value
      * @param bool
@@ -1828,6 +1857,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return (self::$optionSendArrayAsParameter = $_optionSendArrayAsParameter);
     }
+
     /**
      * Gets the optionGenerateAutoloadFile value
      * @return bool
@@ -1836,6 +1866,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionGenerateAutoloadFile;
     }
+
     /**
      * Sets the optionGenerateAutoloadFile value
      * @param bool
@@ -1845,6 +1876,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return (self::$optionGenerateAutoloadFile = $_optionGenerateAutoloadFile);
     }
+
     /**
      * Gets the optionGenerateWsdlClassFile value
      * @return bool
@@ -1853,6 +1885,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionGenerateWsdlClassFile;
     }
+
     /**
      * Sets the optionGenerateWsdlClassFile value
      * @param bool
@@ -1862,6 +1895,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return (self::$optionGenerateWsdlClassFile = $_optionGenerateWsdlClassFile);
     }
+
     /**
      * Gets the optionResponseAsWsdlObject value
      * @return bool
@@ -1870,6 +1904,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionResponseAsWsdlObject;
     }
+
     /**
      * Sets the optionResponseAsWsdlObject value
      * @param bool
@@ -1879,6 +1914,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return (self::$optionResponseAsWsdlObject = $_optionResponseAsWsdlObject);
     }
+
     /**
      * Gets the optionResponseAsWsdlObject value
      * @return bool
@@ -1887,6 +1923,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionSendParametersAsArray;
     }
+
     /**
      * Sets the pptionSendParametersAsArray value
      * @uses WsdlToPhpGenerator::setOptionSendArrayAsParameter() if param is true
@@ -1895,10 +1932,12 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public static function setOptionSendParametersAsArray($_optionSendParametersAsArray = false)
     {
-        if($_optionSendParametersAsArray)
+        if ($_optionSendParametersAsArray) {
             self::setOptionSendArrayAsParameter($_optionSendParametersAsArray);
+        }
         return (self::$optionSendParametersAsArray = $_optionSendParametersAsArray);
     }
+
     /**
      * Gets the optionInheritsClassIdentifier value
      * @return string
@@ -1907,6 +1946,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionInheritsClassIdentifier;
     }
+
     /**
      * Sets the optionInheritsClassIdentifier value
      * @param string
@@ -1914,8 +1954,9 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public static function setOptionInheritsClassIdentifier($_optionInheritsClassIdentifier = '')
     {
-        return (self::$optionInheritsClassIdentifier = (is_string($_optionInheritsClassIdentifier) && !empty($_optionInheritsClassIdentifier))?$_optionInheritsClassIdentifier:'');
+        return (self::$optionInheritsClassIdentifier = (is_string($_optionInheritsClassIdentifier) && !empty($_optionInheritsClassIdentifier)) ? $_optionInheritsClassIdentifier : '');
     }
+
     /**
      * Gets the optionGenericConstantsNames value
      * @return bool
@@ -1924,6 +1965,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionGenericConstantsNames;
     }
+
     /**
      * Sets the optionGenericConstantsNames value
      * @param bool
@@ -1933,6 +1975,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return (self::$optionGenericConstantsNames = $_optionGenericConstantsNames);
     }
+
     /**
      * Gets the optionGenerateTutorialFile value
      * @return bool
@@ -1941,6 +1984,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionGenerateTutorialFile;
     }
+
     /**
      * Sets the optionGenerateTutorialFile value
      * @param bool
@@ -1950,6 +1994,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return (self::$optionGenerateTutorialFile = $_optionGenerateTutorialFile);
     }
+
     /**
      * Gets the optionAddComments value
      * @return array
@@ -1958,6 +2003,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionAddComments;
     }
+
     /**
      * Sets the optionAddComments value
      * @param array
@@ -1967,6 +2013,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return (self::$optionAddComments = $_optionAddComments);
     }
+
     /**
      * Gets the debug mode value
      * @return bool
@@ -1975,6 +2022,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return self::$optionDebug;
     }
+
     /**
      * Sts the debug mode
      * @param bool $_optionDebug
@@ -1984,6 +2032,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return (self::$optionDebug = $_optionDebug);
     }
+
     /**
      * Gets the package name
      * @param bool $_ucFirst ucfirst package name or not
@@ -1991,8 +2040,9 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public static function getPackageName($_ucFirst = true)
     {
-        return $_ucFirst?ucfirst(self::$packageName):self::$packageName;
+        return $_ucFirst ? ucfirst(self::$packageName) : self::$packageName;
     }
+
     /**
      * Sets the package name
      * @param string $_packageName
@@ -2002,6 +2052,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return (self::$packageName = $_packageName);
     }
+
     /**
      * Gets the WSDLs
      * @return array
@@ -2010,6 +2061,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return $this->wsdls;
     }
+
     /**
      * Gets the WSDL at the index
      * @param int $_index
@@ -2017,8 +2069,9 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public function getWsdl($_index)
     {
-        return (is_array($this->wsdls) && count($this->wsdls) > $_index)?implode('',array_slice(array_keys($this->wsdls),$_index,1)):null;
+        return (is_array($this->wsdls) && count($this->wsdls) > $_index) ? implode('', array_slice(array_keys($this->wsdls), $_index, 1)) : null;
     }
+
     /**
      * Sets the WSDLs
      * @param array
@@ -2028,16 +2081,19 @@ class WsdlToPhpGenerator extends SoapClient
     {
         $this->wsdls = $_wsdls;
     }
+
     /**
      * Adds Wsdl location
      * @param string $_wsdlLocation
      */
     public function addWsdl($_wsdlLocation)
     {
-        if(is_string($_wsdlLocation) && !empty($_wsdlLocation))
+        if (is_string($_wsdlLocation) && !empty($_wsdlLocation)) {
             $this->wsdls[$_wsdlLocation] = array(
-                                                'meta'=>array());
+                'meta' => array());
+        }
     }
+
     /**
      * Adds Wsdl location meta information
      * @uses WsdlToPhpGenerator::getWsdl()
@@ -2045,10 +2101,11 @@ class WsdlToPhpGenerator extends SoapClient
      * @param mixed $_metaValue meta value
      * @return string
      */
-    public function addWsdlMeta($_metaName,$_metaValue)
+    public function addWsdlMeta($_metaName, $_metaValue)
     {
         return ($this->wsdls[$this->getWsdl(0)]['meta'][$_metaName] = $_metaValue);
     }
+
     /**
      * Methods to load WSDL from current WSDL when current WSDL imports other WSDL
      * @uses WsdlToPhpGenerator::manageWsdlLocation()
@@ -2059,19 +2116,21 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    private function loadWsdls($_wsdlLocation = '',$_domNode = null,$_fromWsdlLocation = '',$_nodeNameMatch = null)
+    private function loadWsdls($_wsdlLocation = '', $_domNode = null, $_fromWsdlLocation = '', $_nodeNameMatch = null)
     {
         /**
          * Not empty location
          */
-        if(!empty($_wsdlLocation))
-            $this->manageWsdlLocation($_wsdlLocation,$_domNode,$_fromWsdlLocation,$_nodeNameMatch);
-        /**
+        if (!empty($_wsdlLocation)) {
+            $this->manageWsdlLocation($_wsdlLocation, $_domNode, $_fromWsdlLocation, $_nodeNameMatch);
+        } /**
          * New node to browse
          */
-        elseif($_domNode instanceof DOMElement)
-            $this->manageWsdlNode($_wsdlLocation,$_domNode,$_fromWsdlLocation,$_nodeNameMatch);
+        elseif ($_domNode instanceof DOMElement) {
+            $this->manageWsdlNode($_wsdlLocation, $_domNode, $_fromWsdlLocation, $_nodeNameMatch);
+        }
     }
+
     /**
      * Method called when wsdls are loaded and all the structs/operations are loaded
      * Then we can manage some features which can be dependent of all the wsdls linked to the main WSDL
@@ -2084,44 +2143,43 @@ class WsdlToPhpGenerator extends SoapClient
     protected function wsdlsLoaded()
     {
         self::auditInit(__METHOD__);
-        if(count($this->getWsdls()))
-        {
+        if (count($this->getWsdls())) {
             $tags = array();
             /**
              * Retrieve headers informations
              */
-            array_push($tags,'header');
+            array_push($tags, 'header');
             /**
              * Retrieve list informations so inheritance and types are fully retrieved for the next step
              */
-            array_push($tags,'list');
+            array_push($tags, 'list');
             /**
              * Retrieve union informations so inheritance and types are fully retrieved for the next step
              */
-            array_push($tags,'union');
+            array_push($tags, 'union');
             /**
              * Retrieve attribute informations so inheritence and type are fully retrieved
              */
-            array_push($tags,'attribute');
+            array_push($tags, 'attribute');
             /**
              * Retrieve operation message types in order to fully determine themselves
              */
-            array_push($tags,'input');
+            array_push($tags, 'input');
             /**
              * Retrieve operation message types in order to fully determine themselves
              */
-            array_push($tags,'output');
-            foreach($tags as $tagName)
-            {
-                foreach(array_keys($this->getWsdls()) as $wsdlLocation)
-                {
-                    if(is_string($wsdlLocation) && !empty($wsdlLocation))
-                        $this->manageWsdlLocation($wsdlLocation,null,'',$tagName);
+            array_push($tags, 'output');
+            foreach ($tags as $tagName) {
+                foreach (array_keys($this->getWsdls()) as $wsdlLocation) {
+                    if (is_string($wsdlLocation) && !empty($wsdlLocation)) {
+                        $this->manageWsdlLocation($wsdlLocation, null, '', $tagName);
+                    }
                 }
             }
         }
         self::audit(__METHOD__);
     }
+
     /**
      * Default manage method for a location
      * @uses WsdlToPhpGenerator::wsdlLocationToDomDocument()
@@ -2135,28 +2193,26 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    protected function manageWsdlLocation($_wsdlLocation,$_domNode,$_fromWsdlLocation,$_nodeNameMatch = null)
+    protected function manageWsdlLocation($_wsdlLocation, $_domNode, $_fromWsdlLocation, $_nodeNameMatch = null)
     {
         self::auditInit(__METHOD__);
         $domDocument = self::wsdlLocationToDomDocument($_wsdlLocation);
-        if($domDocument && $domDocument->hasChildNodes())
-        {
+        if ($domDocument && $domDocument->hasChildNodes()) {
             $childNodes = $domDocument->childNodes;
             $childNodesLength = $childNodes->length;
             /**
              * Finds first valid element (avoid comments for example)
              */
-            for($i = 0;$i < $childNodesLength;$i++)
-            {
-                if($childNodes->item($i) instanceof DOMElement)
-                {
-                    $this->loadWsdls('',$childNodes->item($i),$_wsdlLocation,$_nodeNameMatch);
+            for ($i = 0; $i < $childNodesLength; $i++) {
+                if ($childNodes->item($i) instanceof DOMElement) {
+                    $this->loadWsdls('', $childNodes->item($i), $_wsdlLocation, $_nodeNameMatch);
                     break;
                 }
             }
         }
         self::audit(__METHOD__);
     }
+
     /**
      * Default manage method for a node
      * @uses WsdlToPhpGenerator::manageWsdlNodeImport()
@@ -2179,75 +2235,72 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    protected function manageWsdlNode($_wsdlLocation = '',$_domNode = null,$_fromWsdlLocation = '',$_nodeNameMatch = null)
+    protected function manageWsdlNode($_wsdlLocation = '', $_domNode = null, $_fromWsdlLocation = '', $_nodeNameMatch = null)
     {
-        if(empty($_nodeNameMatch))
-        {
+        if (empty($_nodeNameMatch)) {
             /**
              * Current node is type of "import" or "include"
              */
-            if(stripos($_domNode->nodeName,'import') !== false || stripos($_domNode->nodeName,'include') !== false)
-                $this->manageWsdlNodeImport($_wsdlLocation,$_domNode,$_fromWsdlLocation);
-            /**
+            if (stripos($_domNode->nodeName, 'import') !== false || stripos($_domNode->nodeName, 'include') !== false) {
+                $this->manageWsdlNodeImport($_wsdlLocation, $_domNode, $_fromWsdlLocation);
+            } /**
              * Restriction
              */
-            elseif(stripos($_domNode->nodeName,'restriction') !== false)
-                $this->manageWsdlNodeRestriction($_wsdlLocation,$_domNode,$_fromWsdlLocation);
-            /**
+            elseif (stripos($_domNode->nodeName, 'restriction') !== false) {
+                $this->manageWsdlNodeRestriction($_wsdlLocation, $_domNode, $_fromWsdlLocation);
+            } /**
              * Enumeration value
              */
-            elseif(stripos($_domNode->nodeName,'enumeration') !== false)
-                $this->manageWsdlNodeEnumeration($_wsdlLocation,$_domNode,$_fromWsdlLocation);
-            /**
+            elseif (stripos($_domNode->nodeName, 'enumeration') !== false) {
+                $this->manageWsdlNodeEnumeration($_wsdlLocation, $_domNode, $_fromWsdlLocation);
+            } /**
              * Element's, part of a struct called attribute
              */
-            elseif($_domNode->hasAttribute('name') && $_domNode->getAttribute('name') != '' && $_domNode->hasAttribute('type') && $_domNode->getAttribute('type') != '')
-                $this->manageWsdlNodeAttribute($_wsdlLocation,$_domNode,$_fromWsdlLocation);
-            /**
+            elseif ($_domNode->hasAttribute('name') && $_domNode->getAttribute('name') != '' && $_domNode->hasAttribute('type') && $_domNode->getAttribute('type') != '') {
+                $this->manageWsdlNodeAttribute($_wsdlLocation, $_domNode, $_fromWsdlLocation);
+            } /**
              * Element
              */
-            elseif(stripos($_domNode->nodeName,'element') !== false || stripos($_domNode->nodeName,'complextype') !== false)
-                $this->manageWsdlNodeElement($_wsdlLocation,$_domNode,$_fromWsdlLocation);
-            /**
+            elseif (stripos($_domNode->nodeName, 'element') !== false || stripos($_domNode->nodeName, 'complextype') !== false) {
+                $this->manageWsdlNodeElement($_wsdlLocation, $_domNode, $_fromWsdlLocation);
+            } /**
              * Documentation's
              */
-            elseif(stripos($_domNode->nodeName,'documentation') !== false && !empty($_domNode->nodeValue))
-                $this->manageWsdlNodeDocumentation($_wsdlLocation,$_domNode,$_fromWsdlLocation);
-            /**
+            elseif (stripos($_domNode->nodeName, 'documentation') !== false && !empty($_domNode->nodeValue)) {
+                $this->manageWsdlNodeDocumentation($_wsdlLocation, $_domNode, $_fromWsdlLocation);
+            } /**
              * Extension of struct
              */
-            elseif(stripos($_domNode->nodeName,'extension') !== false && $_domNode->hasAttribute('base') && $_domNode->getAttribute('base') != '')
-                $this->manageWsdlNodeExtension($_wsdlLocation,$_domNode,$_fromWsdlLocation);
-            /**
+            elseif (stripos($_domNode->nodeName, 'extension') !== false && $_domNode->hasAttribute('base') && $_domNode->getAttribute('base') != '') {
+                $this->manageWsdlNodeExtension($_wsdlLocation, $_domNode, $_fromWsdlLocation);
+            } /**
              * Undefined node
              */
-            else
-                $this->manageWsdlNodeUndefined($_wsdlLocation,$_domNode,$_fromWsdlLocation);
-        }
-        elseif(is_string($_nodeNameMatch) && stripos($_domNode->nodeName,$_nodeNameMatch) !== false)
-        {
+            else {
+                $this->manageWsdlNodeUndefined($_wsdlLocation, $_domNode, $_fromWsdlLocation);
+            }
+        } elseif (is_string($_nodeNameMatch) && stripos($_domNode->nodeName, $_nodeNameMatch) !== false) {
             $manageWsdlNodeMethodName = 'manageWsdlNode' . ucfirst($_nodeNameMatch);
-            if(method_exists($this,$manageWsdlNodeMethodName))
-            {
-                self::auditInit('managewsdlnode_' . $_nodeNameMatch,!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
-                $this->$manageWsdlNodeMethodName($_wsdlLocation,$_domNode,$_fromWsdlLocation,$_nodeNameMatch);
-                self::audit('managewsdlnode_' . $_nodeNameMatch,!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+            if (method_exists($this, $manageWsdlNodeMethodName)) {
+                self::auditInit('managewsdlnode_' . $_nodeNameMatch, !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
+                $this->$manageWsdlNodeMethodName($_wsdlLocation, $_domNode, $_fromWsdlLocation, $_nodeNameMatch);
+                self::audit('managewsdlnode_' . $_nodeNameMatch, !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
             }
         }
         /**
          * other child nodes
          */
-        if($_domNode->hasChildNodes())
-        {
+        if ($_domNode->hasChildNodes()) {
             $childNodes = $_domNode->childNodes;
             $childNodesLength = $childNodes->length;
-            for($i = 0;$i < $childNodesLength;$i++)
-            {
-                if($childNodes->item($i))
-                    $this->loadWsdls('',$childNodes->item($i),!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation,$_nodeNameMatch);
+            for ($i = 0; $i < $childNodesLength; $i++) {
+                if ($childNodes->item($i)) {
+                    $this->loadWsdls('', $childNodes->item($i), !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation, $_nodeNameMatch);
+                }
             }
         }
     }
+
     /**
      * Undefined node manage method
      * @param string $_wsdlLocation the wsdl location
@@ -2255,10 +2308,11 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_fromWsdlLocation the wsdl location imported
      * @return boolean
      */
-    protected function manageWsdlNodeUndefined($_wsdlLocation = '',$_domNode = null,$_fromWsdlLocation = '')
+    protected function manageWsdlNodeUndefined($_wsdlLocation = '', $_domNode = null, $_fromWsdlLocation = '')
     {
         return true;
     }
+
     /**
      * Manages shema import method
      * @uses WsdlToPhpGenerator::addWsdl()
@@ -2272,72 +2326,70 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_fromWsdlLocation the wsdl location imported
      * @return void
      */
-    protected function manageWsdlNodeImport($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '')
+    protected function manageWsdlNodeImport($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '')
     {
-        self::auditInit('managewsdlnode_import',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        self::auditInit('managewsdlnode_import', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
         $location = '';
-        if($_domNode->hasAttribute('location'))
+        if ($_domNode->hasAttribute('location')) {
             $location = $_domNode->getAttribute('location');
-        elseif($_domNode->hasAttribute('schemaLocation'))
+        } elseif ($_domNode->hasAttribute('schemaLocation')) {
             $location = $_domNode->getAttribute('schemaLocation');
-        elseif($_domNode->hasAttribute('schemalocation'))
+        } elseif ($_domNode->hasAttribute('schemalocation')) {
             $location = $_domNode->getAttribute('schemalocation');
-        if(substr($location,0,2) == './')
-            $location = substr($location,2);
+        }
+        if (substr($location, 0, 2) == './') {
+            $location = substr($location, 2);
+        }
         /**
          * Define valid location
          */
         $locations = array();
-        if(!empty($location) && strpos($location,'http://') === false && strpos($location,'https://') === false && (!empty($_wsdlLocation) || !empty($_fromWsdlLocation)))
-        {
+        if (!empty($location) && strpos($location, 'http://') === false && strpos($location, 'https://') === false && (!empty($_wsdlLocation) || !empty($_fromWsdlLocation))) {
             $locationsToParse = array();
-            array_push($locationsToParse,!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
-            foreach($locationsToParse as $locationToParse)
-            {
+            array_push($locationsToParse, !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
+            foreach ($locationsToParse as $locationToParse) {
                 $fileParts = pathinfo($locationToParse);
-                $fileBasename = (is_array($fileParts) && array_key_exists('basename',$fileParts))?$fileParts['basename']:'';
-                $parts = parse_url(str_replace($fileBasename,'',$locationToParse));
-                $scheme = (is_array($parts) && array_key_exists('scheme',$parts))?$parts['scheme']:'';
-                $host = (is_array($parts) && array_key_exists('host',$parts))?$parts['host']:'';
-                $path = (is_array($parts) && array_key_exists('path',$parts))?$parts['path']:'';
-                $path = str_replace($fileBasename,'',$path);
+                $fileBasename = (is_array($fileParts) && array_key_exists('basename', $fileParts)) ? $fileParts['basename'] : '';
+                $parts = parse_url(str_replace($fileBasename, '', $locationToParse));
+                $scheme = (is_array($parts) && array_key_exists('scheme', $parts)) ? $parts['scheme'] : '';
+                $host = (is_array($parts) && array_key_exists('host', $parts)) ? $parts['host'] : '';
+                $path = (is_array($parts) && array_key_exists('path', $parts)) ? $parts['path'] : '';
+                $path = str_replace($fileBasename, '', $path);
                 $cleanLocation = array();
-                $locationToParseParts = explode('/',$location);
-                $pathParts = explode('/',$path);
-                foreach($locationToParseParts as $locationPart)
-                {
-                    if($locationPart == '..')
-                        $pathParts = count($pathParts) >= 2?array_slice($pathParts,0,count($pathParts) - 2):$pathParts;
-                    else
-                        array_push($cleanLocation,$locationPart);
+                $locationToParseParts = explode('/', $location);
+                $pathParts = explode('/', $path);
+                foreach ($locationToParseParts as $locationPart) {
+                    if ($locationPart == '..') {
+                        $pathParts = count($pathParts) >= 2 ? array_slice($pathParts, 0, count($pathParts) - 2) : $pathParts;
+                    } else {
+                        array_push($cleanLocation, $locationPart);
+                    }
                 }
-                $port = (is_array($parts) && array_key_exists('port',$parts))?$parts['port']:'';
+                $port = (is_array($parts) && array_key_exists('port', $parts)) ? $parts['port'] : '';
                 /**
                  * Remote file
                  */
-                if(!empty($scheme) && !empty($host))
-                    array_push($locations,str_replace('urn','http',$scheme) . '://' . $host . (!empty($port)?':' . $port:'') . (count($pathParts)?str_replace('//','/','/' . implode('/',$pathParts) . '/'):'/') . implode('/',$cleanLocation));
-                /**
+                if (!empty($scheme) && !empty($host)) {
+                    array_push($locations, str_replace('urn', 'http', $scheme) . '://' . $host . (!empty($port) ? ':' . $port : '') . (count($pathParts) ? str_replace('//', '/', '/' . implode('/', $pathParts) . '/') : '/') . implode('/', $cleanLocation));
+                } /**
                  * Local file
                  */
-                elseif(empty($scheme) && empty($host) && count($pathParts))
-                {
-                    $localPath = str_replace('//','/',implode('/',$pathParts) . '/');
-                    $localFile = $localPath . implode('/',$cleanLocation);
-                    if(is_file($localFile))
-                        array_push($locations,$localFile);
+                elseif (empty($scheme) && empty($host) && count($pathParts)) {
+                    $localPath = str_replace('//', '/', implode('/', $pathParts) . '/');
+                    $localFile = $localPath . implode('/', $cleanLocation);
+                    if (is_file($localFile)) {
+                        array_push($locations, $localFile);
+                    }
                 }
             }
+        } elseif (!empty($location)) {
+            array_push($locations, $location);
         }
-        elseif(!empty($location))
-            array_push($locations,$location);
         /**
          * New WSDL
          */
-        foreach($locations as $location)
-        {
-            if(!empty($location) && !array_key_exists($location,$this->getWsdls()))
-            {
+        foreach ($locations as $location) {
+            if (!empty($location) && !array_key_exists($location, $this->getWsdls())) {
                 /**
                  * Save Wsdl location
                  */
@@ -2345,11 +2397,12 @@ class WsdlToPhpGenerator extends SoapClient
                 /**
                  * Load Wsdl
                  */
-                $this->loadWsdls($location,null,$_wsdlLocation);
+                $this->loadWsdls($location, null, $_wsdlLocation);
             }
         }
-        self::audit('managewsdlnode_import',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        self::audit('managewsdlnode_import', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
     }
+
     /**
      * Manages restriction method
      * @uses WsdlToPhpGenerator::findSuitableParent()
@@ -2368,38 +2421,34 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_fromWsdlLocation the wsdl location imported
      * @return void
      */
-    protected function manageWsdlNodeRestriction($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '')
+    protected function manageWsdlNodeRestriction($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '')
     {
-        self::auditInit('managewsdlnode_restriction',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        self::auditInit('managewsdlnode_restriction', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
         /**
          * Finds parent node of this enumeration node
          */
         $parentNode = self::findSuitableParent($_domNode);
-        if($parentNode)
-        {
+        if ($parentNode) {
             /**
              * Inheritance detection
              */
-            if($_domNode->hasAttribute('base'))
-            {
-                $type = explode(':',$_domNode->getAttribute('base'));
-                if(count($type) && !empty($type[count($type) - 1]) && $type[count($type) - 1] != $parentNode->getAttribute('name'))
-                    $this->setStructInheritance($parentNode->getAttribute('name'),$type[count($type) - 1]);
+            if ($_domNode->hasAttribute('base')) {
+                $type = explode(':', $_domNode->getAttribute('base'));
+                if (count($type) && !empty($type[count($type) - 1]) && $type[count($type) - 1] != $parentNode->getAttribute('name')) {
+                    $this->setStructInheritance($parentNode->getAttribute('name'), $type[count($type) - 1]);
+                }
             }
             /**
              * Meta informations about struct
              */
-            if($_domNode->hasChildNodes())
-            {
+            if ($_domNode->hasChildNodes()) {
                 $childNodes = $_domNode->childNodes;
                 $childNodesLength = $childNodes->length;
                 $firstValidNodePos = 0;
-                while(!(($childNodes->item($firstValidNodePos) instanceof DOMNode) && $childNodes->item($firstValidNodePos)->nodeType === XML_ELEMENT_NODE) && $firstValidNodePos++ < $childNodesLength);
-                if($childNodes->item($firstValidNodePos))
-                {
+                while (!(($childNodes->item($firstValidNodePos) instanceof DOMNode) && $childNodes->item($firstValidNodePos)->nodeType === XML_ELEMENT_NODE) && $firstValidNodePos++ < $childNodesLength) ;
+                if ($childNodes->item($firstValidNodePos)) {
                     $this->addVirtualStruct($parentNode->getAttribute('name'));
-                    for($i = 0;$i < $childNodesLength;$i++)
-                    {
+                    for ($i = 0; $i < $childNodesLength; $i++) {
                         $childNode = $childNodes->item($i);
                         /**
                          * Not an enumeration restriction :
@@ -2413,19 +2462,19 @@ class WsdlToPhpGenerator extends SoapClient
                          * </xs:simpleType>
                          * </code>
                          */
-                        if($childNode && stripos($childNode->nodeName,'enumeration') === false && $childNode->hasAttributes())
-                        {
-                            $childNodeName = explode(':',$childNode->nodeName);
+                        if ($childNode && stripos($childNode->nodeName, 'enumeration') === false && $childNode->hasAttributes()) {
+                            $childNodeName = explode(':', $childNode->nodeName);
                             $childNodeName = $childNodeName[count($childNodeName) - 1];
                             $childNodeValue = $childNode->getAttribute('value');
-                            $this->addStructMeta($parentNode->getAttribute('name'),$childNodeName,$childNodeValue);
+                            $this->addStructMeta($parentNode->getAttribute('name'), $childNodeName, $childNodeValue);
                         }
                     }
                 }
             }
         }
-        self::audit('managewsdlnode_restriction',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        self::audit('managewsdlnode_restriction', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
     }
+
     /**
      * Manages an enumeratio tag
      * @uses WsdlToPhpGenerator::findSuitableParent()
@@ -2442,18 +2491,19 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_fromWsdlLocation the wsdl location imported
      * @return void
      */
-    protected function manageWsdlNodeEnumeration($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '')
+    protected function manageWsdlNodeEnumeration($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '')
     {
-        self::auditInit('managewsdlnode_enumeration',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        self::auditInit('managewsdlnode_enumeration', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
         $parentNode = self::findSuitableParent($_domNode);
-        if($parentNode && $_domNode->hasAttribute('value'))
-        {
-            if($this->getStruct($parentNode->getAttribute('name')) && !$this->getStruct($parentNode->getAttribute('name'))->getFromSchema())
-                $this->getStruct($parentNode->getAttribute('name'))->setFromSchema(!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
-            $this->addRestrictionValue($parentNode->getAttribute('name'),$_domNode->getAttribute('value'));
+        if ($parentNode && $_domNode->hasAttribute('value')) {
+            if ($this->getStruct($parentNode->getAttribute('name')) && !$this->getStruct($parentNode->getAttribute('name'))->getFromSchema()) {
+                $this->getStruct($parentNode->getAttribute('name'))->setFromSchema(!empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
+            }
+            $this->addRestrictionValue($parentNode->getAttribute('name'), $_domNode->getAttribute('value'));
         }
-        self::audit('managewsdlnode_enumeration',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        self::audit('managewsdlnode_enumeration', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
     }
+
     /**
      * Manages element method
      * @uses WsdlToPhpGenerator::findSuitableParent()
@@ -2469,18 +2519,19 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_fromWsdlLocation the wsdl location imported
      * @return void
      */
-    protected function manageWsdlNodeElement($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '')
+    protected function manageWsdlNodeElement($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '')
     {
-        self::auditInit('managewsdlnode_element',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
-        if($this->getStruct($_domNode->getAttribute('name')))
-        {
+        self::auditInit('managewsdlnode_element', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
+        if ($this->getStruct($_domNode->getAttribute('name'))) {
             $struct = $this->getStruct($_domNode->getAttribute('name'));
-            $struct->setFromSchema(!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
-            if ($_domNode->hasAttribute('abstract') && ($_domNode->getAttribute('abstract') == 1 || $_domNode->getAttribute('abstract') == 'true'))
+            $struct->setFromSchema(!empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
+            if ($_domNode->hasAttribute('abstract') && ($_domNode->getAttribute('abstract') == 1 || $_domNode->getAttribute('abstract') == 'true')) {
                 $struct->setIsAbstract(true);
+            }
         }
-        self::audit('managewsdlnode_element',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        self::audit('managewsdlnode_element', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
     }
+
     /**
      * Manages element method
      * @uses WsdlToPhpGenerator::findSuitableParent()
@@ -2498,80 +2549,79 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_fromWsdlLocation the wsdl location imported
      * @return void
      */
-    protected function manageWsdlNodeDocumentation($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '')
+    protected function manageWsdlNodeDocumentation($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '')
     {
-        self::auditInit('managewsdlnode_documentation',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        self::auditInit('managewsdlnode_documentation', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
         $documentation = trim($_domNode->nodeValue);
         $documentation = str_replace(array(
-                                            "\r",
-                                            "\n",
-                                            "\t"),array(
-                                                    '',
-                                                    '',
-                                                    ' '),$documentation);
-        $documentation = preg_replace('[\s+]',' ',$documentation);
+            "\r",
+            "\n",
+            "\t"), array(
+            '',
+            '',
+            ' '), $documentation);
+        $documentation = preg_replace('[\s+]', ' ', $documentation);
         /**
          * Finds parent node of this documentation node without taking care of the name attribute for enumeration and definitions
          * This case is managed first because enumerations are contained by elements and the method could climb to its parent without stopping on the enumeration tag
          * Go from the deepest possible node to the highest possible node
          * Each case must be treated on the same level, this is why we test the suitableParentNode for each case
          */
-        $enumerationNode = self::findSuitableParent($_domNode,false,array(
-                                                                        'enumeration'));
-        $definitionsNode = self::findSuitableParent($_domNode,false,array(
-                                                                        'definitions'));
-        $attributeGroupNode = self::findSuitableParent($_domNode,false,array(
-                                                                            'attributeGroup'));
-        $anyNode = self::findSuitableParent($_domNode,true,array(
-                                                                'operation'));
+        $enumerationNode = self::findSuitableParent($_domNode, false, array(
+            'enumeration'));
+        $definitionsNode = self::findSuitableParent($_domNode, false, array(
+            'definitions'));
+        $attributeGroupNode = self::findSuitableParent($_domNode, false, array(
+            'attributeGroup'));
+        $anyNode = self::findSuitableParent($_domNode, true, array(
+            'operation'));
         /**
          * is it an enumeration' value
          */
-        if($enumerationNode && stripos($enumerationNode->nodeName,'enumeration') !== false)
-        {
+        if ($enumerationNode && stripos($enumerationNode->nodeName, 'enumeration') !== false) {
             /**
              * Finds parent node of this enumeration node
              */
             $upParentNode = self::findSuitableParent($enumerationNode);
-            if($upParentNode)
-                $this->setStructValueDocumentation($upParentNode->getAttribute('name'),$enumerationNode->getAttribute('value'),$documentation);
-        }
-        /**
+            if ($upParentNode) {
+                $this->setStructValueDocumentation($upParentNode->getAttribute('name'), $enumerationNode->getAttribute('value'), $documentation);
+            }
+        } /**
          * is it an attributeGroup element, nothing yet but need to be catched here
          */
-        elseif($attributeGroupNode && stripos($attributeGroupNode->nodeName,'attributeGroup') !== false)
-        {}
-        /**
+        elseif ($attributeGroupNode && stripos($attributeGroupNode->nodeName, 'attributeGroup') !== false) {
+        } /**
          * is it an element ? part of a struct
          */
-        elseif($anyNode && (stripos($anyNode->nodeName,'element') !== false || stripos($anyNode->nodeName,'attribute') !== false) && $anyNode->hasAttribute('type'))
-        {
+        elseif ($anyNode && (stripos($anyNode->nodeName, 'element') !== false || stripos($anyNode->nodeName, 'attribute') !== false) && $anyNode->hasAttribute('type')) {
             /**
              * Finds parent node of this documentation node
              */
             $upParentNode = self::findSuitableParent($anyNode);
-            if($upParentNode)
-                $this->setStructAttributeDocumentation($upParentNode->getAttribute('name'),$anyNode->getAttribute('name'),$documentation);
-            elseif(stripos($anyNode->nodeName,'element') !== false)
-                $this->setStructDocumentation($anyNode->getAttribute('name'),$documentation);
-        }
-        /**
+            if ($upParentNode) {
+                $this->setStructAttributeDocumentation($upParentNode->getAttribute('name'), $anyNode->getAttribute('name'), $documentation);
+            } elseif (stripos($anyNode->nodeName, 'element') !== false) {
+                $this->setStructDocumentation($anyNode->getAttribute('name'), $documentation);
+            }
+        } /**
          * is it a struct ?
          */
-        elseif($anyNode && (stripos($anyNode->nodeName,'element') !== false || stripos($anyNode->nodeName,'complextype') !== false || stripos($anyNode->nodeName,'simpletype') !== false || stripos($anyNode->nodeName,'attribute') !== false))
-            $this->setStructDocumentation($anyNode->getAttribute('name'),$documentation);
-        /**
+        elseif ($anyNode && (stripos($anyNode->nodeName, 'element') !== false || stripos($anyNode->nodeName, 'complextype') !== false || stripos($anyNode->nodeName, 'simpletype') !== false || stripos($anyNode->nodeName, 'attribute') !== false)) {
+            $this->setStructDocumentation($anyNode->getAttribute('name'), $documentation);
+        } /**
          * is it an operation ?
          */
-        elseif($anyNode && stripos($anyNode->nodeName,'operation') !== false)
-            $this->setServiceFunctionDocumentation($anyNode->getAttribute('name'),$documentation);
-        /**
+        elseif ($anyNode && stripos($anyNode->nodeName, 'operation') !== false) {
+            $this->setServiceFunctionDocumentation($anyNode->getAttribute('name'), $documentation);
+        } /**
          * is it the definitions node of the WSDL
          */
-        elseif($definitionsNode && stripos($definitionsNode->nodeName,'definitions') !== false)
-            $this->addWsdlMeta('documentation',$documentation);
-        self::audit('managewsdlnode_documentation',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        elseif ($definitionsNode && stripos($definitionsNode->nodeName, 'definitions') !== false) {
+            $this->addWsdlMeta('documentation', $documentation);
+        }
+        self::audit('managewsdlnode_documentation', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
     }
+
     /**
      * Manages extension method
      * @uses WsdlToPhpGenerator::findSuitableParent()
@@ -2585,21 +2635,18 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_fromWsdlLocation the wsdl location imported
      * @return void
      */
-    protected function manageWsdlNodeExtension($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '')
+    protected function manageWsdlNodeExtension($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '')
     {
-        self::auditInit('managewsdlnode_extension',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
-        if($_domNode->hasAttribute('base'))
-        {
-            $base = explode(':',$_domNode->getAttribute('base'));
+        self::auditInit('managewsdlnode_extension', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
+        if ($_domNode->hasAttribute('base')) {
+            $base = explode(':', $_domNode->getAttribute('base'));
             $inheritsName = $base[count($base) - 1];
-            if(!empty($inheritsName))
-            {
+            if (!empty($inheritsName)) {
                 /**
                  * Finds parent node of this extension node
                  */
                 $parentNode = self::findSuitableParent($_domNode);
-                if($parentNode)
-                {
+                if ($parentNode) {
                     /**
                      * Avoid infinite loop on case like this when looping/managing inheritance :
                      * <code>
@@ -2612,13 +2659,15 @@ class WsdlToPhpGenerator extends SoapClient
                      * </xs:complexType>
                      * </code>
                      */
-                    if($inheritsName !== $parentNode->getAttribute('name'))
-                        $this->setStructInheritance($parentNode->getAttribute('name'),$inheritsName);
+                    if ($inheritsName !== $parentNode->getAttribute('name')) {
+                        $this->setStructInheritance($parentNode->getAttribute('name'), $inheritsName);
+                    }
                 }
             }
         }
-        self::audit('managewsdlnode_extension',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        self::audit('managewsdlnode_extension', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
     }
+
     /**
      * Manages header node to extract informations about header types
      * @uses WsdlToPhpGenerator::findSuitableParent()
@@ -2640,121 +2689,110 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    protected function manageWsdlNodeHeader($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '',$_nodeNameMatch = null)
+    protected function manageWsdlNodeHeader($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '', $_nodeNameMatch = null)
     {
         /**
          * Ensure current node is defined as the operation input
          */
-        $parentNode = self::findSuitableParent($_domNode,false,array(
-                                                                    'input'));
-        if($parentNode && stripos($parentNode->nodeName,'input') !== false)
-        {
+        $parentNode = self::findSuitableParent($_domNode, false, array(
+            'input'));
+        if ($parentNode && stripos($parentNode->nodeName, 'input') !== false) {
             /**
              * Finds operation node
              */
-            $parentNode = self::findSuitableParent($parentNode,true,array(
-                                                                        'operation'));
-            if($parentNode)
-            {
+            $parentNode = self::findSuitableParent($parentNode, true, array(
+                'operation'));
+            if ($parentNode) {
                 /**
                  * Header types and names
                  */
                 $headerType = '';
-                $headerName = $_domNode->hasAttribute('part')?$_domNode->getAttribute('part'):'';
-                $headerMessage = explode(':',$_domNode->hasAttribute('message')?$_domNode->getAttribute('message'):'');
-                $headerMessage = count($headerMessage)?$headerMessage[count($headerMessage) - 1]:'';
+                $headerName = $_domNode->hasAttribute('part') ? $_domNode->getAttribute('part') : '';
+                $headerMessage = explode(':', $_domNode->hasAttribute('message') ? $_domNode->getAttribute('message') : '');
+                $headerMessage = count($headerMessage) ? $headerMessage[count($headerMessage) - 1] : '';
                 /**
                  * Finds it in the wsdls and avoid mutliple searches for the same message part
                  */
-                if(!empty($headerName) && !empty($headerMessage) && $this->getServiceFunction($parentNode->getAttribute('name')) && !in_array($headerName,$this->getServiceFunction($parentNode->getAttribute('name'))->getMetaValue('SOAPHeaderNames',array())))
-                {
+                if (!empty($headerName) && !empty($headerMessage) && $this->getServiceFunction($parentNode->getAttribute('name')) && !in_array($headerName, $this->getServiceFunction($parentNode->getAttribute('name'))->getMetaValue('SOAPHeaderNames', array()))) {
                     $notRequired = false;
                     $attributes = $_domNode->attributes;
                     $attributesCount = $attributes->length;
-                    for($i = 0;$i < $attributesCount;$i++)
-                    {
-                        if($attributes->item($i) && stripos($attributes->item($i)->nodeName,'required') !== false)
+                    for ($i = 0; $i < $attributesCount; $i++) {
+                        if ($attributes->item($i) && stripos($attributes->item($i)->nodeName, 'required') !== false) {
                             $notRequired |= ($attributes->item($i)->nodeValue === 0 || $attributes->item($i)->nodeValue === 'false' || $attributes->item($i)->nodeValue === false || $attributes->item($i)->nodeValue === 'non' || $attributes->item($i)->nodeValue === 'no');
+                        }
                     }
                     /**
                      * Header Namespace ?
                      */
                     $namespace = '';
-                    if($_domNode->hasAttribute('namespace') && $_domNode->getAttribute('namespace') != '')
+                    if ($_domNode->hasAttribute('namespace') && $_domNode->getAttribute('namespace') != '') {
                         $namespace = $_domNode->getAttribute('namespace');
+                    }
                     $globalHeaderTypeKey = __METHOD__ . '_' . $headerMessage . '_' . $headerName . '_type';
                     $globalHeaderNameKey = __METHOD__ . '_' . $headerMessage . '_' . $headerName . '_name';
                     $globalHeaderNamespaceKey = __METHOD__ . '_' . $headerMessage . '_' . $headerName . '_namespace';
                     /**
                      * header name for the current message already known ?
                      */
-                    $headerType = self::getGlobal($globalHeaderTypeKey,'');
-                    $namespace = self::getGlobal($globalHeaderNamespaceKey,$namespace);
-                    $headerName = self::getGlobal($globalHeaderNameKey,$headerName);
-                    if(empty($headerType))
-                    {
-                        foreach($this->getWsdls() as $wsdlLocation=>$meta)
-                        {
+                    $headerType = self::getGlobal($globalHeaderTypeKey, '');
+                    $namespace = self::getGlobal($globalHeaderNamespaceKey, $namespace);
+                    $headerName = self::getGlobal($globalHeaderNameKey, $headerName);
+                    if (empty($headerType)) {
+                        foreach ($this->getWsdls() as $wsdlLocation => $meta) {
                             $domDocument = self::wsdlLocationToDomDocument($wsdlLocation);
-                            if($domDocument instanceof DOMDocument)
-                            {
+                            if ($domDocument instanceof DOMDocument) {
                                 /**
                                  * Gets part element
                                  */
-                                $nodes = self::executeDomXPathQuery($domDocument,"//*[@name='$headerMessage']/*[@name='$headerName']");
+                                $nodes = self::executeDomXPathQuery($domDocument, "//*[@name='$headerMessage']/*[@name='$headerName']");
                                 $nodesLength = $nodes->length;
-                                if($nodesLength == 1 && ($nodes->item(0) instanceof DOMNode) && stripos($nodes->item(0)->nodeName,'part') !== false)
-                                {
+                                if ($nodesLength == 1 && ($nodes->item(0) instanceof DOMNode) && stripos($nodes->item(0)->nodeName, 'part') !== false) {
                                     $part = $nodes->item(0);
                                     $partElement = '';
                                     $partNamespace = '';
                                     $partAttributes = array(
-                                                            'element',
-                                                            'type');
-                                    foreach($partAttributes as $partAttributeName)
-                                    {
-                                        if($part->hasAttribute($partAttributeName))
-                                        {
-                                            $partElements = explode(':',$part->getAttribute($partAttributeName));
-                                            $partElement = count($partElements)?$partElements[count($partElements) - 1]:'';
-                                            $partNamespace = count($partElements)?$partElements[0]:'';
-                                            if(!empty($partElement))
-                                            {
+                                        'element',
+                                        'type');
+                                    foreach ($partAttributes as $partAttributeName) {
+                                        if ($part->hasAttribute($partAttributeName)) {
+                                            $partElements = explode(':', $part->getAttribute($partAttributeName));
+                                            $partElement = count($partElements) ? $partElements[count($partElements) - 1] : '';
+                                            $partNamespace = count($partElements) ? $partElements[0] : '';
+                                            if (!empty($partElement)) {
                                                 $headerName = $partElement;
                                                 break;
                                             }
                                         }
                                     }
-                                    if(!empty($partElement))
-                                    {
+                                    if (!empty($partElement)) {
                                         /**
                                          * Finds element part in the WSDLs
                                          */
-                                        foreach($this->getWsdls() as $wsdlLocation=>$meta)
-                                        {
+                                        foreach ($this->getWsdls() as $wsdlLocation => $meta) {
                                             $domDocument = self::wsdlLocationToDomDocument($wsdlLocation);
-                                            if($domDocument instanceof DOMDocument)
-                                            {
+                                            if ($domDocument instanceof DOMDocument) {
                                                 /**
                                                  * Namespace value
                                                  */
-                                                $definitions = self::findSuitableParent($part,false,array(
-                                                                                                        'definitions'));
-                                                if($definitions && $definitions->hasAttribute('xmlns:' . $partNamespace) && $definitions->getAttribute('xmlns:' . $partNamespace) != '')
+                                                $definitions = self::findSuitableParent($part, false, array(
+                                                    'definitions'));
+                                                if ($definitions && $definitions->hasAttribute('xmlns:' . $partNamespace) && $definitions->getAttribute('xmlns:' . $partNamespace) != '') {
                                                     $namespace = $definitions->getAttribute('xmlns:' . $partNamespace);
+                                                }
                                                 /**
                                                  * Header type value
                                                  */
-                                                $nodes = self::executeDomXPathQuery($domDocument,"//*[@name='$partElement']");
+                                                $nodes = self::executeDomXPathQuery($domDocument, "//*[@name='$partElement']");
                                                 $nodesLength = $nodes->length;
                                                 $nodeIndex = 0;
-                                                while($nodeIndex < $nodesLength && (!($nodes->item($nodeIndex) instanceof DOMElement) || (($nodes->item($nodeIndex) instanceof DOMElement) && (!$nodes->item($nodeIndex)->hasAttribute('type') || ($nodes->item($nodeIndex)->hasAttribute('type') && $nodes->item($nodeIndex)->getAttribute('type') === '')))) && $nodeIndex++);
-                                                if($nodeIndex <= $nodesLength && ($nodes->item($nodeIndex) instanceof DOMElement) && $nodes->item($nodeIndex)->hasAttribute('type') && $nodes->item($nodeIndex)->getAttribute('type') != '')
-                                                {
-                                                    $headerType = explode(':',$nodes->item($nodeIndex)->getAttribute('type'));
+                                                while ($nodeIndex < $nodesLength && (!($nodes->item($nodeIndex) instanceof DOMElement) || (($nodes->item($nodeIndex) instanceof DOMElement) && (!$nodes->item($nodeIndex)->hasAttribute('type') || ($nodes->item($nodeIndex)->hasAttribute('type') && $nodes->item($nodeIndex)->getAttribute('type') === '')))) && $nodeIndex++) ;
+                                                if ($nodeIndex <= $nodesLength && ($nodes->item($nodeIndex) instanceof DOMElement) && $nodes->item($nodeIndex)->hasAttribute('type') && $nodes->item($nodeIndex)->getAttribute('type') != '') {
+                                                    $headerType = explode(':', $nodes->item($nodeIndex)->getAttribute('type'));
                                                     $headerType = $headerType[count($headerType) - 1];
-                                                    if($this->getStruct($headerType) && $this->getStruct($headerType)->getIsStruct())
+                                                    if ($this->getStruct($headerType) && $this->getStruct($headerType)->getIsStruct()) {
                                                         $headerType = '{@link ' . $this->getStruct($headerType)->getPackagedName() . '}';
+                                                    }
                                                     break;
                                                 }
                                             }
@@ -2762,17 +2800,18 @@ class WsdlToPhpGenerator extends SoapClient
                                         /**
                                          * Element type not found, then it's maybe an already known struct ?
                                          */
-                                        if(empty($headerType) && $this->getStruct($partElement) && $this->getStruct($partElement)->getIsStruct())
+                                        if (empty($headerType) && $this->getStruct($partElement) && $this->getStruct($partElement)->getIsStruct()) {
                                             $headerType = '{@link ' . $this->getStruct($partElement)->getPackagedName() . '}';
+                                        }
                                     }
                                 }
                             }
-                            self::setGlobal($globalHeaderNameKey,$headerName);
-                            if(!empty($namespace))
-                                self::setGlobal($globalHeaderNamespaceKey,$namespace);
-                            if(!empty($headerType))
-                            {
-                                self::setGlobal($globalHeaderTypeKey,$headerType);
+                            self::setGlobal($globalHeaderNameKey, $headerName);
+                            if (!empty($namespace)) {
+                                self::setGlobal($globalHeaderNamespaceKey, $namespace);
+                            }
+                            if (!empty($headerType)) {
+                                self::setGlobal($globalHeaderTypeKey, $headerType);
                                 break;
                             }
                         }
@@ -2780,27 +2819,28 @@ class WsdlToPhpGenerator extends SoapClient
                     /**
                      * Indicate that header is required for this operation
                      */
-                    $this->addServiceFunctionMeta($parentNode->getAttribute('name'),'SOAPHeaders',array(
-                                                                                                        $notRequired?'optional':'required'));
+                    $this->addServiceFunctionMeta($parentNode->getAttribute('name'), 'SOAPHeaders', array(
+                        $notRequired ? 'optional' : 'required'));
                     /**
                      * Indicate the required header name
                      */
-                    $this->addServiceFunctionMeta($parentNode->getAttribute('name'),'SOAPHeaderNames',array(
-                                                                                                            $headerName));
+                    $this->addServiceFunctionMeta($parentNode->getAttribute('name'), 'SOAPHeaderNames', array(
+                        $headerName));
                     /**
                      * Indicate the required header type
                      */
-                    $this->addServiceFunctionMeta($parentNode->getAttribute('name'),'SOAPHeaderTypes',array(
-                                                                                                            $headerType));
+                    $this->addServiceFunctionMeta($parentNode->getAttribute('name'), 'SOAPHeaderTypes', array(
+                        $headerType));
                     /**
                      * Indicate the required header namespace
                      */
-                    $this->addServiceFunctionMeta($parentNode->getAttribute('name'),'SOAPHeaderNamespaces',array(
-                                                                                                                $namespace));
+                    $this->addServiceFunctionMeta($parentNode->getAttribute('name'), 'SOAPHeaderNamespaces', array(
+                        $namespace));
                 }
             }
         }
     }
+
     /**
      * Manages attribute node to extract informations about its type if SoapClient didn't succeed to determine it
      * @uses DOMElement::hasAttribute()
@@ -2821,51 +2861,47 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    protected function manageWsdlNodeAttribute($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '',$_nodeNameMatch = null)
+    protected function manageWsdlNodeAttribute($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '', $_nodeNameMatch = null)
     {
-        if($_nodeNameMatch === 'attribute')
-        {
-            if(($_domNode instanceof DOMElement) && $_domNode->hasAttribute('name') && $_domNode->getAttribute('name') && $_domNode->hasAttribute('type') && $_domNode->getAttribute('type'))
-            {
+        if ($_nodeNameMatch === 'attribute') {
+            if (($_domNode instanceof DOMElement) && $_domNode->hasAttribute('name') && $_domNode->getAttribute('name') && $_domNode->hasAttribute('type') && $_domNode->getAttribute('type')) {
                 $parentNode = self::findSuitableParent($_domNode);
-                if($parentNode)
-                {
-                    $attributeModel = $this->getStructAttribute($parentNode->getAttribute('name'),$_domNode->getAttribute('name'));
-                    $type = explode(':',$_domNode->getAttribute('type'));
+                if ($parentNode) {
+                    $attributeModel = $this->getStructAttribute($parentNode->getAttribute('name'), $_domNode->getAttribute('name'));
+                    $type = explode(':', $_domNode->getAttribute('type'));
                     $typeModel = WsdlToPhpModel::getModelByName($type[count($type) - 1]);
-                    if($attributeModel && (!$attributeModel->getType() || strtolower($attributeModel->getType()) == 'unknown') && $typeModel)
-                    {
-                        if($typeModel->getIsRestriction())
+                    if ($attributeModel && (!$attributeModel->getType() || strtolower($attributeModel->getType()) == 'unknown') && $typeModel) {
+                        if ($typeModel->getIsRestriction()) {
                             $attributeModel->setType($typeModel->getName());
-                        elseif(!$typeModel->getIsStruct() && $typeModel->getInheritance())
+                        } elseif (!$typeModel->getIsStruct() && $typeModel->getInheritance()) {
                             $attributeModel->setType($typeModel->getInheritance());
+                        }
                     }
                 }
             }
-        }
-        else
-        {
-            self::auditInit('managewsdlnode_attribute',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+        } else {
+            self::auditInit('managewsdlnode_attribute', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
             /**
              * Finds parent node of this element node
              */
             $parentNode = self::findSuitableParent($_domNode);
-            if($parentNode)
-            {
-                if($this->getStruct($parentNode->getAttribute('name')) && !$this->getStruct($parentNode->getAttribute('name'))->getFromSchema())
-                    $this->getStruct($parentNode->getAttribute('name'))->setFromSchema(!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+            if ($parentNode) {
+                if ($this->getStruct($parentNode->getAttribute('name')) && !$this->getStruct($parentNode->getAttribute('name'))->getFromSchema()) {
+                    $this->getStruct($parentNode->getAttribute('name'))->setFromSchema(!empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
+                }
                 $attributes = $_domNode->attributes;
                 $attributesLength = $attributes->length;
-                for($i = 0;$i < $attributesLength;$i++)
-                {
+                for ($i = 0; $i < $attributesLength; $i++) {
                     $attribute = $attributes->item($i);
-                    if($attribute && $attribute->nodeName != 'name' && $attribute->nodeName != 'type')
-                        $this->addStructAttributeMeta($parentNode->getAttribute('name'),$_domNode->getAttribute('name'),$attribute->nodeName,$attribute->nodeValue);
+                    if ($attribute && $attribute->nodeName != 'name' && $attribute->nodeName != 'type') {
+                        $this->addStructAttributeMeta($parentNode->getAttribute('name'), $_domNode->getAttribute('name'), $attribute->nodeName, $attribute->nodeValue);
+                    }
                 }
             }
-            self::audit('managewsdlnode_attribute',!empty($_wsdlLocation)?$_wsdlLocation:$_fromWsdlLocation);
+            self::audit('managewsdlnode_attribute', !empty($_wsdlLocation) ? $_wsdlLocation : $_fromWsdlLocation);
         }
     }
+
     /**
      * Manages union node
      * @uses WsdlToPhpGenerator::findSuitableParent()
@@ -2884,64 +2920,56 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    protected function manageWsdlNodeUnion($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '',$_nodeNameMatch = null)
+    protected function manageWsdlNodeUnion($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '', $_nodeNameMatch = null)
     {
-        if($_domNode->hasAttributes())
-        {
+        if ($_domNode->hasAttributes()) {
             $parentNode = self::findSuitableParent($_domNode);
-            if($parentNode)
-            {
+            if ($parentNode) {
                 $parentNodeStruct = $this->getStruct($parentNode->getAttribute('name'));
                 $attributes = $_domNode->attributes;
                 $attributesCount = $attributes->length;
-                for($i = 0;$i < $attributesCount;$i++)
-                {
+                for ($i = 0; $i < $attributesCount; $i++) {
                     $attribute = $attributes->item($i);
-                    if($attribute && stripos($attribute->nodeName,'membertypes') !== false)
-                    {
+                    if ($attribute && stripos($attribute->nodeName, 'membertypes') !== false) {
                         $nodeValue = $attribute->nodeValue;
-                        $nodeValues = explode(' ',$nodeValue);
-                        if(count($nodeValues))
-                        {
+                        $nodeValues = explode(' ', $nodeValue);
+                        if (count($nodeValues)) {
                             $nodeValueTypes = array();
-                            foreach($nodeValues as $nodeValueType)
-                            {
-                                $nodeValueType = explode(':',$nodeValueType);
+                            foreach ($nodeValues as $nodeValueType) {
+                                $nodeValueType = explode(':', $nodeValueType);
                                 $nodeValueType = trim($nodeValueType[count($nodeValueType) - 1]);
-                                if(!empty($nodeValueType))
-                                {
-                                    $this->addStructMeta($parentNode->getAttribute('name'),'union',array(
-                                                                                                        $nodeValueType));
+                                if (!empty($nodeValueType)) {
+                                    $this->addStructMeta($parentNode->getAttribute('name'), 'union', array(
+                                        $nodeValueType));
                                     $nodeValueTypeModel = WsdlToPhpModel::getModelByName($nodeValueType);
-                                    while($nodeValueTypeModel)
-                                    {
-                                        if($nodeValueTypeModel->getIsRestriction())
-                                        {
+                                    while ($nodeValueTypeModel) {
+                                        if ($nodeValueTypeModel->getIsRestriction()) {
                                             $nodeValueType = $nodeValueTypeModel->getName();
                                             $nodeValueTypeModel = null;
-                                        }
-                                        elseif($nodeValueTypeModel->getInheritance())
-                                        {
+                                        } elseif ($nodeValueTypeModel->getInheritance()) {
                                             $newNodeValueTypeModel = WsdlToPhpModel::getModelByName($nodeValueTypeModel->getInheritance());
-                                            if(!$newNodeValueTypeModel)
+                                            if (!$newNodeValueTypeModel) {
                                                 $nodeValueType = $nodeValueTypeModel->getInheritance();
+                                            }
                                             $nodeValueTypeModel = $newNodeValueTypeModel;
-                                        }
-                                        else
+                                        } else {
                                             $nodeValueTypeModel = null;
+                                        }
                                     }
-                                    array_push($nodeValueTypes,$nodeValueType);
+                                    array_push($nodeValueTypes, $nodeValueType);
                                 }
                             }
                             $nodeValueTypes = array_unique($nodeValueTypes);
-                            if(count($nodeValueTypes) && $parentNodeStruct && !$parentNodeStruct->getInheritance())
-                                $this->setStructInheritance($parentNodeStruct->getName(),implode(',',$nodeValueTypes));
+                            if (count($nodeValueTypes) && $parentNodeStruct && !$parentNodeStruct->getInheritance()) {
+                                $this->setStructInheritance($parentNodeStruct->getName(), implode(',', $nodeValueTypes));
+                            }
                         }
                     }
                 }
             }
         }
     }
+
     /**
      * Manages list node
      * @uses WsdlToPhpGenerator::findSuitableParent()
@@ -2956,29 +2984,27 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    protected function manageWsdlNodeList($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '',$_nodeNameMatch = null)
+    protected function manageWsdlNodeList($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '', $_nodeNameMatch = null)
     {
-        if($_domNode->hasAttributes())
-        {
+        if ($_domNode->hasAttributes()) {
             $parentNode = self::findSuitableParent($_domNode);
-            if($parentNode)
-            {
+            if ($parentNode) {
                 $parentNodeStruct = $this->getStruct($parentNode->getAttribute('name'));
                 $attributes = $_domNode->attributes;
                 $attributesCount = $attributes->length;
-                for($i = 0;$i < $attributesCount;$i++)
-                {
+                for ($i = 0; $i < $attributesCount; $i++) {
                     $attribute = $attributes->item($i);
-                    if($attribute && stripos($attribute->nodeName,'itemType') !== false)
-                    {
+                    if ($attribute && stripos($attribute->nodeName, 'itemType') !== false) {
                         $nodeValue = trim($attribute->nodeValue);
-                        if($this->getStruct($nodeValue))
-                            $this->setStructInheritance($parentNode->getAttribute('name'),'array of ' . $this->getStruct($nodeValue)->getName());
+                        if ($this->getStruct($nodeValue)) {
+                            $this->setStructInheritance($parentNode->getAttribute('name'), 'array of ' . $this->getStruct($nodeValue)->getName());
+                        }
                     }
                 }
             }
         }
     }
+
     /**
      * Manages input node
      * @uses WsdlToPhpGenerator::manageWsdlNodeInputOutput()
@@ -2988,10 +3014,11 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    protected function manageWsdlNodeInput($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '',$_nodeNameMatch = null)
+    protected function manageWsdlNodeInput($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '', $_nodeNameMatch = null)
     {
-        $this->manageWsdlNodeInputOutput($_wsdlLocation,$_domNode,$_fromWsdlLocation,$_nodeNameMatch);
+        $this->manageWsdlNodeInputOutput($_wsdlLocation, $_domNode, $_fromWsdlLocation, $_nodeNameMatch);
     }
+
     /**
      * Manages output node
      * @uses WsdlToPhpGenerator::manageWsdlNodeInputOutput()
@@ -3001,10 +3028,11 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    protected function manageWsdlNodeOutput($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '',$_nodeNameMatch = null)
+    protected function manageWsdlNodeOutput($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '', $_nodeNameMatch = null)
     {
-        $this->manageWsdlNodeInputOutput($_wsdlLocation,$_domNode,$_fromWsdlLocation,$_nodeNameMatch);
+        $this->manageWsdlNodeInputOutput($_wsdlLocation, $_domNode, $_fromWsdlLocation, $_nodeNameMatch);
     }
+
     /**
      * Manages input/output node
      * @uses WsdlToPhpGenerator::findSuitableParent()
@@ -3024,117 +3052,95 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_nodeNameMatch the name the node name must match, only when it's necessary to match a certain type of nodes
      * @return void
      */
-    protected function manageWsdlNodeInputOutput($_wsdlLocation = '',DOMNode $_domNode,$_fromWsdlLocation = '',$_nodeNameMatch = null)
+    protected function manageWsdlNodeInputOutput($_wsdlLocation = '', DOMNode $_domNode, $_fromWsdlLocation = '', $_nodeNameMatch = null)
     {
-        if($_domNode->hasAttribute('message') && $_domNode->getAttribute('message') != '' && ($_nodeNameMatch === 'input' || $_nodeNameMatch === 'output'))
-        {
-            $messageName = explode(':',$_domNode->getAttribute('message'));
+        if ($_domNode->hasAttribute('message') && $_domNode->getAttribute('message') != '' && ($_nodeNameMatch === 'input' || $_nodeNameMatch === 'output')) {
+            $messageName = explode(':', $_domNode->getAttribute('message'));
             $messageName = $messageName[count($messageName) - 1];
-            $parentNode = self::findSuitableParent($_domNode,true,array(
-                                                                        'operation'));
-            if(!empty($messageName) && $parentNode)
-            {
+            $parentNode = self::findSuitableParent($_domNode, true, array(
+                'operation'));
+            if (!empty($messageName) && $parentNode) {
                 $operationName = $parentNode->getAttribute('name');
-                if($this->getServiceFunction($operationName))
-                {
-                    if($_nodeNameMatch == 'input')
+                if ($this->getServiceFunction($operationName)) {
+                    if ($_nodeNameMatch == 'input') {
                         $operationParameterReturnType = $this->getServiceFunction($operationName)->getParameterType();
-                    else
+                    } else {
                         $operationParameterReturnType = $this->getServiceFunction($operationName)->getReturnType();
+                    }
                     $operationParameterReturnTypeKnown = true;
-                    if(is_string($operationParameterReturnType) && (empty($operationParameterReturnType) || strtolower($operationParameterReturnType) === 'unknown'))
-                    {
+                    if (is_string($operationParameterReturnType) && (empty($operationParameterReturnType) || strtolower($operationParameterReturnType) === 'unknown')) {
                         $operationParameterReturnTypeKnown = false;
                         $operationParameterReturnTypeFound = '';
-                    }
-                    elseif(is_array($operationParameterReturnType))
-                    {
-                        foreach($operationParameterReturnType as $parameterType)
+                    } elseif (is_array($operationParameterReturnType)) {
+                        foreach ($operationParameterReturnType as $parameterType) {
                             $operationParameterReturnTypeKnown &= (!empty($parameterType) && !(strtolower($parameterType) === 'unknown'));
+                        }
                         $operationParameterReturnTypeFound = array();
                     }
                     /**
                      * Parameter type is unknown, then find message among the WSDLs
                      */
-                    if(!$operationParameterReturnTypeKnown)
-                    {
+                    if (!$operationParameterReturnTypeKnown) {
                         $operationParameterReturnTypeDefined = false;
-                        foreach($this->getWsdls() as $wsdlLocation=>$meta)
-                        {
+                        foreach ($this->getWsdls() as $wsdlLocation => $meta) {
                             $domDocument = self::wsdlLocationToDomDocument($wsdlLocation);
-                            if($domDocument instanceof DOMDocument)
-                            {
-                                $nodes = self::executeDomXPathQuery($domDocument,"//*[@name='$messageName']");
+                            if ($domDocument instanceof DOMDocument) {
+                                $nodes = self::executeDomXPathQuery($domDocument, "//*[@name='$messageName']");
                                 $nodesLength = $nodes->length;
                                 $nodeIndex = 0;
-                                while($nodeIndex < $nodesLength && (!($nodes->item($nodeIndex) instanceof DOMElement) || (($nodes->item($nodeIndex) instanceof DOMElement) && stripos($nodes->item($nodeIndex)->nodeName,'message') === false)) && $nodeIndex++);
+                                while ($nodeIndex < $nodesLength && (!($nodes->item($nodeIndex) instanceof DOMElement) || (($nodes->item($nodeIndex) instanceof DOMElement) && stripos($nodes->item($nodeIndex)->nodeName, 'message') === false)) && $nodeIndex++) ;
                                 /**
                                  * Message definition found, then find its corresponding element
                                  */
-                                if($nodeIndex <= $nodesLength && ($nodes->item($nodeIndex) instanceof DOMElement) && stripos($nodes->item($nodeIndex)->nodeName,'message') !== false && $nodes->item($nodeIndex)->hasChildNodes())
-                                {
+                                if ($nodeIndex <= $nodesLength && ($nodes->item($nodeIndex) instanceof DOMElement) && stripos($nodes->item($nodeIndex)->nodeName, 'message') !== false && $nodes->item($nodeIndex)->hasChildNodes()) {
                                     $childNodes = $nodes->item($nodeIndex)->childNodes;
                                     $childNodesCount = $childNodes->length;
-                                    for($i = 0;$i < $childNodesCount;$i++)
-                                    {
+                                    for ($i = 0; $i < $childNodesCount; $i++) {
                                         $child = $childNodes->item($i);
-                                        if($child && stripos($child->nodeName,'part') !== false && $child->hasAttribute('element') && $child->getAttribute('element') !== '')
-                                        {
+                                        if ($child && stripos($child->nodeName, 'part') !== false && $child->hasAttribute('element') && $child->getAttribute('element') !== '') {
                                             $partElement = '';
                                             $partAttributes = array(
-                                                                    'element',
-                                                                    'type');
-                                            foreach($partAttributes as $partAttributeName)
-                                            {
-                                                if($child->hasAttribute($partAttributeName))
-                                                {
-                                                    $partElements = explode(':',$child->getAttribute($partAttributeName));
-                                                    $partElement = count($partElements)?$partElements[count($partElements) - 1]:'';
-                                                    if(!empty($partElement))
+                                                'element',
+                                                'type');
+                                            foreach ($partAttributes as $partAttributeName) {
+                                                if ($child->hasAttribute($partAttributeName)) {
+                                                    $partElements = explode(':', $child->getAttribute($partAttributeName));
+                                                    $partElement = count($partElements) ? $partElements[count($partElements) - 1] : '';
+                                                    if (!empty($partElement)) {
                                                         break;
+                                                    }
                                                 }
                                             }
-                                            if(!empty($partElement))
-                                            {
+                                            if (!empty($partElement)) {
                                                 /**
                                                  * Finds element part in the WSDLs
                                                  */
-                                                foreach($this->getWsdls() as $wsdlLocation=>$meta)
-                                                {
+                                                foreach ($this->getWsdls() as $wsdlLocation => $meta) {
                                                     $domDocument = self::wsdlLocationToDomDocument($wsdlLocation);
-                                                    if($domDocument instanceof DOMDocument)
-                                                    {
-                                                        $nodes = self::executeDomXPathQuery($domDocument,"//*[@name='$partElement']");
+                                                    if ($domDocument instanceof DOMDocument) {
+                                                        $nodes = self::executeDomXPathQuery($domDocument, "//*[@name='$partElement']");
                                                         $nodesLength = $nodes->length;
                                                         $nodeIndex = 0;
-                                                        while($nodeIndex < $nodesLength && (!($nodes->item($nodeIndex) instanceof DOMElement) || (($nodes->item($nodeIndex) instanceof DOMElement) && (!$nodes->item($nodeIndex)->hasAttribute('type') || ($nodes->item($nodeIndex)->hasAttribute('type') && $nodes->item($nodeIndex)->getAttribute('type') === '')))) && $nodeIndex++);
-                                                        if($nodeIndex <= $nodesLength && ($nodes->item($nodeIndex) instanceof DOMElement) && $nodes->item($nodeIndex)->hasAttribute('type') && $nodes->item($nodeIndex)->getAttribute('type') != '')
-                                                        {
-                                                            $parameterType = explode(':',$nodes->item($nodeIndex)->getAttribute('type'));
+                                                        while ($nodeIndex < $nodesLength && (!($nodes->item($nodeIndex) instanceof DOMElement) || (($nodes->item($nodeIndex) instanceof DOMElement) && (!$nodes->item($nodeIndex)->hasAttribute('type') || ($nodes->item($nodeIndex)->hasAttribute('type') && $nodes->item($nodeIndex)->getAttribute('type') === '')))) && $nodeIndex++) ;
+                                                        if ($nodeIndex <= $nodesLength && ($nodes->item($nodeIndex) instanceof DOMElement) && $nodes->item($nodeIndex)->hasAttribute('type') && $nodes->item($nodeIndex)->getAttribute('type') != '') {
+                                                            $parameterType = explode(':', $nodes->item($nodeIndex)->getAttribute('type'));
                                                             $parameterType = $parameterType[count($parameterType) - 1];
-                                                            if(!empty($parameterType))
-                                                            {
-                                                                if(is_string($operationParameterReturnType))
-                                                                {
+                                                            if (!empty($parameterType)) {
+                                                                if (is_string($operationParameterReturnType)) {
                                                                     $operationParameterReturnTypeFound = $parameterType;
                                                                     $operationParameterReturnTypeDefined = true;
-                                                                }
-                                                                else
-                                                                {
-                                                                    array_push($operationParameterReturnTypeFound,$parameterType);
-                                                                    if(count($operationParameterReturnTypeFound) == count($operationParameterReturnType))
+                                                                } else {
+                                                                    array_push($operationParameterReturnTypeFound, $parameterType);
+                                                                    if (count($operationParameterReturnTypeFound) == count($operationParameterReturnType)) {
                                                                         $operationParameterReturnTypeDefined = true;
+                                                                    }
                                                                 }
                                                             }
-                                                        }
-                                                        else
-                                                        {
+                                                        } else {
                                                             $nodeIndex = 0;
-                                                            while(!$operationParameterReturnTypeDefined && $nodeIndex < $nodesLength)
-                                                            {
+                                                            while (!$operationParameterReturnTypeDefined && $nodeIndex < $nodesLength) {
                                                                 $node = $nodes->item($nodeIndex);
-                                                                if($node && !empty($node->nodeName) && $node->getAttribute('name') == $partElement && (stripos($node->nodeName,'element') !== false || stripos($node->nodeName,'complexType') !== false || stripos($node->nodeName,'simpleType') !== false))
-                                                                {
+                                                                if ($node && !empty($node->nodeName) && $node->getAttribute('name') == $partElement && (stripos($node->nodeName, 'element') !== false || stripos($node->nodeName, 'complexType') !== false || stripos($node->nodeName, 'simpleType') !== false)) {
                                                                     $operationParameterReturnTypeFound = $node->getAttribute('name');
                                                                     $operationParameterReturnTypeDefined = true;
                                                                 }
@@ -3142,34 +3148,38 @@ class WsdlToPhpGenerator extends SoapClient
                                                             }
                                                         }
                                                     }
-                                                    if($operationParameterReturnTypeDefined)
+                                                    if ($operationParameterReturnTypeDefined) {
                                                         break;
+                                                    }
                                                 }
                                             }
                                         }
-                                        if($operationParameterReturnTypeDefined)
+                                        if ($operationParameterReturnTypeDefined) {
                                             break;
+                                        }
                                     }
                                 }
                             }
-                            if($operationParameterReturnTypeDefined)
+                            if ($operationParameterReturnTypeDefined) {
                                 break;
+                            }
                         }
                         /**
                          * Operation parameter type found, then define it
                          */
-                        if($operationParameterReturnTypeDefined)
-                        {
-                            if($_nodeNameMatch == 'input')
+                        if ($operationParameterReturnTypeDefined) {
+                            if ($_nodeNameMatch == 'input') {
                                 $this->getServiceFunction($operationName)->setParameterType($operationParameterReturnTypeFound);
-                            else
+                            } else {
                                 $this->getServiceFunction($operationName)->setReturnType($operationParameterReturnTypeFound);
+                            }
                         }
                     }
                 }
             }
         }
     }
+
     /**
      * Finds the suitable parent node of the current node in maximum 5 parents
      * Centralize method to find a valid parent
@@ -3183,20 +3193,21 @@ class WsdlToPhpGenerator extends SoapClient
      * @param int $_maxDeep max deep of this current node
      * @return DOMElement|null
      */
-    final private static function findSuitableParent(DOMNode $_domNode,$_checkName = true,array $_parentTags = array(),$_maxDeep = 5)
+    final private static function findSuitableParent(DOMNode $_domNode, $_checkName = true, array $_parentTags = array(), $_maxDeep = 5)
     {
-        self::auditInit(__METHOD__,$_domNode->nodeName);
+        self::auditInit(__METHOD__, $_domNode->nodeName);
         $parentTags = array_merge(array(
-                                        'element',
-                                        'complexType',
-                                        'simpleType',
-                                        'attribute'),$_parentTags);
+            'element',
+            'complexType',
+            'simpleType',
+            'attribute'), $_parentTags);
         $parentNode = $_domNode->parentNode;
-        while($_maxDeep-- > 0 && ($parentNode instanceof DOMElement) && $parentNode->nodeName && (!preg_match('/' . implode('|',$parentTags) . '/i',$parentNode->nodeName) || ($_checkName && preg_match('/' . implode('|',$parentTags) . '/i',$parentNode->nodeName) && (!$parentNode->hasAttribute('name') || $parentNode->getAttribute('name') == ''))))
+        while ($_maxDeep-- > 0 && ($parentNode instanceof DOMElement) && $parentNode->nodeName && (!preg_match('/' . implode('|', $parentTags) . '/i', $parentNode->nodeName) || ($_checkName && preg_match('/' . implode('|', $parentTags) . '/i', $parentNode->nodeName) && (!$parentNode->hasAttribute('name') || $parentNode->getAttribute('name') == ''))))
             $parentNode = $parentNode->parentNode;
-        self::audit(__METHOD__,$_domNode->nodeName);
-        return ($parentNode instanceof DOMElement)?$parentNode:null;
+        self::audit(__METHOD__, $_domNode->nodeName);
+        return ($parentNode instanceof DOMElement) ? $parentNode : null;
     }
+
     /**
      * Execute query on DOMDocument using DOMXPath
      * @uses DOMXPath::query()
@@ -3204,11 +3215,12 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_query the query to execute
      * @return DOMNodeList the results
      */
-    public static function executeDomXPathQuery(DOMDocument $_domDocument,$_query)
+    public static function executeDomXPathQuery(DOMDocument $_domDocument, $_query)
     {
         $domXPath = new DOMXPath($_domDocument);
         return $domXPath->query($_query);
     }
+
     /**
      * Returns the DOMDocument object for a wsdl location
      * @uses WsdlToPhpGenerator::getGlobal()
@@ -3223,32 +3235,33 @@ class WsdlToPhpGenerator extends SoapClient
      */
     final private static function wsdlLocationToDomDocument($_wsdlLocation)
     {
-        self::auditInit(__METHOD__,$_wsdlLocation);
+        self::auditInit(__METHOD__, $_wsdlLocation);
         $globalKey = __METHOD__ . '_' . $_wsdlLocation;
         $dom = self::getGlobal($globalKey);
-        if(!($dom instanceof DOMDocument))
-        {
+        if (!($dom instanceof DOMDocument)) {
             $wsdlLocationContent = '';
-            $dom = new DOMDocument('1.0','UTF-8');
-            if(@$dom->load($_wsdlLocation))
+            $dom = new DOMDocument('1.0', 'UTF-8');
+            if (@$dom->load($_wsdlLocation)) {
                 $wsdlLocationContent = trim($dom->saveXML());
+            }
             /**
              * Comments tag on the beginning block parsing the DOMDocument
              */
-            if(empty($wsdlLocationContent) || trim($wsdlLocationContent) == '<?xml version="1.0" encoding="UTF-8"?>')
-            {
+            if (empty($wsdlLocationContent) || trim($wsdlLocationContent) == '<?xml version="1.0" encoding="UTF-8"?>') {
                 $wsdlLocationContent = @file_get_contents($_wsdlLocation);
-                $wsdlLocationContent = preg_replace('(<!--.*-->)','',$wsdlLocationContent);
+                $wsdlLocationContent = preg_replace('(<!--.*-->)', '', $wsdlLocationContent);
             }
-            if(!empty($wsdlLocationContent))
+            if (!empty($wsdlLocationContent)) {
                 @$dom->loadXML($wsdlLocationContent);
-            else
+            } else {
                 $dom = null;
-            self::setGlobal($globalKey,$dom);
+            }
+            self::setGlobal($globalKey, $dom);
         }
-        self::audit(__METHOD__,$_wsdlLocation);
+        self::audit(__METHOD__, $_wsdlLocation);
         return $dom;
     }
+
     /**
      * Returns directory where to store class and create it if needed
      * @uses WsdlToPhpGenerator::getCategory()
@@ -3258,25 +3271,26 @@ class WsdlToPhpGenerator extends SoapClient
      * @param WsdlToPhpModel $_model the model for which we generate the folder
      * @return string
      */
-    private function getDirectory($_rootDirectory,$_rootDirectoryRights,WsdlToPhpModel $_model)
+    private function getDirectory($_rootDirectory, $_rootDirectoryRights, WsdlToPhpModel $_model)
     {
         $directory = $_rootDirectory;
         $mainCat = $this->getCategory($_model);
         $subCat = $this->getSubCategory($_model);
-        if(!empty($mainCat))
-        {
+        if (!empty($mainCat)) {
             $directory .= ucfirst($mainCat) . '/';
-            if(!is_dir($directory))
-                @mkdir($directory,$_rootDirectoryRights);
+            if (!is_dir($directory)) {
+                @mkdir($directory, $_rootDirectoryRights);
+            }
         }
-        if(!empty($subCat))
-        {
+        if (!empty($subCat)) {
             $directory .= ucfirst($subCat) . '/';
-            if(!is_dir($directory))
-                @mkdir($directory,$_rootDirectoryRights);
+            if (!is_dir($directory)) {
+                @mkdir($directory, $_rootDirectoryRights);
+            }
         }
         return $directory;
     }
+
     /**
      * Gets main category part
      * @param WsdlToPhpModel $_model the model for which we generate the folder
@@ -3284,8 +3298,9 @@ class WsdlToPhpGenerator extends SoapClient
      */
     private function getCategory(WsdlToPhpModel $_model)
     {
-        return $this->getPart($_model,self::OPT_CAT_KEY);
+        return $this->getPart($_model, self::OPT_CAT_KEY);
     }
+
     /**
      * Gets sub category part
      * @param WsdlToPhpModel $_model the model for which we generate the folder
@@ -3293,8 +3308,9 @@ class WsdlToPhpGenerator extends SoapClient
      */
     private function getSubCategory(WsdlToPhpModel $_model)
     {
-        return $this->getPart($_model,self::OPT_SUB_CAT_KEY);
+        return $this->getPart($_model, self::OPT_SUB_CAT_KEY);
     }
+
     /**
      * Gets gather name class
      * @param WsdlToPhpModel $_model the model for which we generate the folder
@@ -3302,8 +3318,9 @@ class WsdlToPhpGenerator extends SoapClient
      */
     private function getGather(WsdlToPhpModel $_model)
     {
-        return $this->getPart($_model,self::OPT_GATH_METH_KEY);
+        return $this->getPart($_model, self::OPT_GATH_METH_KEY);
     }
+
     /**
      * Returns the service name associated to the function/operation name in order to gather them in one service class
      * @uses WsdlToPhpGenerator::getGather()
@@ -3314,6 +3331,7 @@ class WsdlToPhpGenerator extends SoapClient
     {
         return ucfirst($this->getGather(new WsdlToPhpModel($_functionName)));
     }
+
     /**
      * Gets category part
      * @uses WsdlToPhpGenerator::getOptionCategory()
@@ -3326,32 +3344,32 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_optionName category type
      * @return string
      */
-    protected function getPart(WsdlToPhpModel $_model,$_optionName)
+    protected function getPart(WsdlToPhpModel $_model, $_optionName)
     {
         $elementType = '';
         $optionValue = 0;
         $string = $_model->getCleanName();
-        switch($_optionName)
-        {
+        switch ($_optionName) {
             case self::OPT_CAT_KEY:
                 $optionValue = self::getOptionCategory();
                 break;
             case self::OPT_SUB_CAT_KEY:
                 $optionValue = self::getOptionSubCategory();
-                $mainCatPart = $this->getPart($_model,self::OPT_CAT_KEY);
-                switch(self::getOptionCategory())
-                {
+                $mainCatPart = $this->getPart($_model, self::OPT_CAT_KEY);
+                switch (self::getOptionCategory()) {
                     case self::OPT_CAT_END_NAME:
-                        if($string != $mainCatPart && strlen($mainCatPart) < strlen($string))
-                            $string = substr($string,0,strlen($string) - strlen($mainCatPart));
-                        elseif($string == $mainCatPart)
+                        if ($string != $mainCatPart && strlen($mainCatPart) < strlen($string)) {
+                            $string = substr($string, 0, strlen($string) - strlen($mainCatPart));
+                        } elseif ($string == $mainCatPart) {
                             $string = '';
+                        }
                         break;
                     case self::OPT_CAT_START_NAME:
-                        if($string != $mainCatPart && strlen($mainCatPart) < strlen($string))
-                            $string = substr($string,strlen($mainCatPart));
-                        elseif($string == $mainCatPart)
+                        if ($string != $mainCatPart && strlen($mainCatPart) < strlen($string)) {
+                            $string = substr($string, strlen($mainCatPart));
+                        } elseif ($string == $mainCatPart) {
                             $string = '';
+                        }
                         break;
                     case self::OPT_CAT_NONE_NAME:
                     case self::OPT_CAT_TYPE:
@@ -3364,34 +3382,31 @@ class WsdlToPhpGenerator extends SoapClient
                 $optionValue = self::getOptionGatherMethods();
                 break;
         }
-        if(!empty($string))
-        {
-            switch($optionValue)
-            {
+        if (!empty($string)) {
+            switch ($optionValue) {
                 case self::OPT_CAT_END_NAME:
                 case self::OPT_SUB_CAT_END_NAME:
                 case self::OPT_GATH_METH_END_NAME:
                     /**
                      * Determine category from last word
                      */
-                    $parts = preg_split('/[A-Z]/',ucfirst($string));
+                    $parts = preg_split('/[A-Z]/', ucfirst($string));
                     /**
                      * Ex : Error or error
                      */
-                    if(count($parts) == 0)
+                    if (count($parts) == 0) {
                         $elementType = $string;
-                    elseif(!empty($parts[count($parts) - 1]))
-                        $elementType = substr($string,strrpos($string,implode('',array_slice($parts,-1))) - 1);
-                    else
-                    {
+                    } elseif (!empty($parts[count($parts) - 1])) {
+                        $elementType = substr($string, strrpos($string, implode('', array_slice($parts, -1))) - 1);
+                    } else {
                         $part = '';
-                        for($i = count($parts) - 1;$i >= 0;$i--)
-                        {
+                        for ($i = count($parts) - 1; $i >= 0; $i--) {
                             $part = trim($parts[$i]);
-                            if(!empty($part))
+                            if (!empty($part)) {
                                 break;
+                            }
                         }
-                        $elementType = substr($string,((count($parts) - 2 - $i) + 1) * -1);
+                        $elementType = substr($string, ((count($parts) - 2 - $i) + 1) * -1);
                     }
                     break;
                 case self::OPT_CAT_START_NAME:
@@ -3400,24 +3415,23 @@ class WsdlToPhpGenerator extends SoapClient
                     /**
                      * Determine category from first word
                      */
-                    $parts = preg_split('/[A-Z]/',ucfirst($string));
+                    $parts = preg_split('/[A-Z]/', ucfirst($string));
                     /**
                      * Ex : Error or error
                      */
-                    if(count($parts) == 0)
+                    if (count($parts) == 0) {
                         $elementType = $string;
-                    elseif(empty($parts[0]) && !empty($parts[1]))
-                        $elementType = substr($string,0,strlen($parts[1]) + 1);
-                    else
-                    {
+                    } elseif (empty($parts[0]) && !empty($parts[1])) {
+                        $elementType = substr($string, 0, strlen($parts[1]) + 1);
+                    } else {
                         $part = '';
-                        for($i = 0;$i < count($parts);$i++)
-                        {
+                        for ($i = 0; $i < count($parts); $i++) {
                             $part = trim($parts[$i]);
-                            if(!empty($part))
+                            if (!empty($part)) {
                                 break;
+                            }
                         }
-                        $elementType = substr($string,0,$i);
+                        $elementType = substr($string, 0, $i);
                     }
                     break;
                 case self::OPT_CAT_TYPE:
@@ -3431,6 +3445,7 @@ class WsdlToPhpGenerator extends SoapClient
         }
         return $elementType;
     }
+
     /**
      * Inits global array dedicated to the class
      * @uses WsdlToPhpGenerator::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY
@@ -3441,6 +3456,7 @@ class WsdlToPhpGenerator extends SoapClient
         self::$globals[self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY] = array();
         return true;
     }
+
     /**
      * Clears the global array dedicated the the class
      * @uses WsdlToPhpGenerator::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY
@@ -3448,10 +3464,12 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public static function unsetGlobals()
     {
-        if(array_key_exists(self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY,self::$globals))
+        if (array_key_exists(self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY, self::$globals)) {
             unset(self::$globals[self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY]);
+        }
         return true;
     }
+
     /**
      * Sets a global value
      * @uses WsdlToPhpGenerator::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY
@@ -3459,15 +3477,18 @@ class WsdlToPhpGenerator extends SoapClient
      * @param mixed $_globalValue the value to store
      * @return mixed
      */
-    private static function setGlobal($_globalKey,$_globalValue)
+    private static function setGlobal($_globalKey, $_globalValue)
     {
-        if(!is_scalar($_globalKey))
+        if (!is_scalar($_globalKey)) {
             return null;
-        if(array_key_exists(self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY,self::$globals))
+        }
+        if (array_key_exists(self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY, self::$globals)) {
             return (self::$globals[self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY][$_globalKey] = $_globalValue);
-        else
+        } else {
             return null;
+        }
     }
+
     /**
      * Gets a global value
      * @uses WsdlToPhpGenerator::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY
@@ -3475,15 +3496,18 @@ class WsdlToPhpGenerator extends SoapClient
      * @param mixed $_globalFallback the fallback value
      * @return mixed
      */
-    private static function getGlobal($_globalKey,$_globalFallback = null)
+    private static function getGlobal($_globalKey, $_globalFallback = null)
     {
-        if(!is_scalar($_globalKey))
+        if (!is_scalar($_globalKey)) {
             return $_globalFallback;
-        if(array_key_exists(self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY,self::$globals) && array_key_exists($_globalKey,self::$globals[self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY]))
+        }
+        if (array_key_exists(self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY, self::$globals) && array_key_exists($_globalKey, self::$globals[self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY])) {
             return self::$globals[self::WSDL_TO_PHP_GENERATOR_GLOBAL_KEY][$_globalKey];
-        else
+        } else {
             return $_globalFallback;
+        }
     }
+
     /**
      * Method to store audit timing during the process
      * @uses WsdlToPhpGenerator::WSDL_TO_PHP_GENERATOR_AUDIT_KEY
@@ -3496,10 +3520,11 @@ class WsdlToPhpGenerator extends SoapClient
      * @param bool $_createOnly indicates if the element must be only created or not
      * @return bool true
      */
-    private static function audit($_auditName,$_auditElement = '',$_spentTime = 0,$_createOnly = false)
+    private static function audit($_auditName, $_auditElement = '', $_spentTime = 0, $_createOnly = false)
     {
-        if(!is_scalar($_auditName) || empty($_auditName))
+        if (!is_scalar($_auditName) || empty($_auditName)) {
             return false;
+        }
         /**
          * Current time used
          */
@@ -3508,76 +3533,72 @@ class WsdlToPhpGenerator extends SoapClient
          * Variables contained by an audit entry
          */
         $variables = array(
-                        'spent_time'=>$_spentTime,
-                        'last_time'=>$time,
-                        'calls'=>0);
+            'spent_time' => $_spentTime,
+            'last_time' => $time,
+            'calls' => 0);
         /**
          * Audit content
          */
-        $audit = self::getGlobal(self::WSDL_TO_PHP_GENERATOR_AUDIT_KEY,array());
+        $audit = self::getGlobal(self::WSDL_TO_PHP_GENERATOR_AUDIT_KEY, array());
         /**
          * Main audit category based on the current audit
          */
-        if(strpos($_auditName,'_'))
-        {
+        if (strpos($_auditName, '_')) {
             $mainAuditName = '';
-            $mainAuditName = implode('',array_slice(explode('_',$_auditName),0,1));
-            if(!empty($mainAuditName))
-            {
-                if(!array_key_exists($mainAuditName,$audit))
+            $mainAuditName = implode('', array_slice(explode('_', $_auditName), 0, 1));
+            if (!empty($mainAuditName)) {
+                if (!array_key_exists($mainAuditName, $audit)) {
                     $audit[$mainAuditName] = $variables;
-                elseif(!$_createOnly)
-                {
-                    $audit[$mainAuditName]['spent_time'] += $_spentTime > 0?$_spentTime:($time - $audit[$mainAuditName]['last_time']);
+                } elseif (!$_createOnly) {
+                    $audit[$mainAuditName]['spent_time'] += $_spentTime > 0 ? $_spentTime : ($time - $audit[$mainAuditName]['last_time']);
                     $audit[$mainAuditName]['last_time'] = $time;
                     $audit[$mainAuditName]['calls']++;
-                }
-                else
+                } else {
                     $audit[$mainAuditName]['last_time'] = $time;
+                }
             }
         }
         /**
          * Current audit name
          */
-        if(!array_key_exists($_auditName,$audit))
+        if (!array_key_exists($_auditName, $audit)) {
             $audit[$_auditName] = array(
-                                        'own'=>$variables,
-                                        'elements'=>array());
-        elseif(!$_createOnly)
-        {
-            $audit[$_auditName]['own']['spent_time'] += $_spentTime > 0?$_spentTime:($time - $audit[$_auditName]['own']['last_time']);
+                'own' => $variables,
+                'elements' => array());
+        } elseif (!$_createOnly) {
+            $audit[$_auditName]['own']['spent_time'] += $_spentTime > 0 ? $_spentTime : ($time - $audit[$_auditName]['own']['last_time']);
             $audit[$_auditName]['own']['last_time'] = $time;
             $audit[$_auditName]['own']['calls']++;
-        }
-        else
+        } else {
             $audit[$_auditName]['own']['last_time'] = $time;
+        }
         /**
          * Current audit element
          */
-        if(!empty($_auditElement))
-        {
-            if(!array_key_exists($_auditElement,$audit[$_auditName]['elements']))
+        if (!empty($_auditElement)) {
+            if (!array_key_exists($_auditElement, $audit[$_auditName]['elements'])) {
                 $audit[$_auditName]['elements'][$_auditElement] = $variables;
-            elseif(!$_createOnly)
-            {
-                $audit[$_auditName]['elements'][$_auditElement]['spent_time'] += $_spentTime > 0?$_spentTime:($time - $audit[$_auditName]['elements'][$_auditElement]['last_time']);
+            } elseif (!$_createOnly) {
+                $audit[$_auditName]['elements'][$_auditElement]['spent_time'] += $_spentTime > 0 ? $_spentTime : ($time - $audit[$_auditName]['elements'][$_auditElement]['last_time']);
                 $audit[$_auditName]['elements'][$_auditElement]['last_time'] = $time;
                 $audit[$_auditName]['elements'][$_auditElement]['calls']++;
-            }
-            else
+            } else {
                 $audit[$_auditName]['elements'][$_auditElement]['last_time'] = $time;
+            }
         }
         /**
          * Update global audit
          */
-        self::setGlobal(self::WSDL_TO_PHP_GENERATOR_AUDIT_KEY,$audit);
+        self::setGlobal(self::WSDL_TO_PHP_GENERATOR_AUDIT_KEY, $audit);
         /**
          * Display debug
          */
-        if(!$_createOnly && self::getOptionDebug())
+        if (!$_createOnly && self::getOptionDebug()) {
             echo "\n" . date('Y-m-d H:i:s') . " - {$_auditName} - {$_auditElement}";
+        }
         return true;
     }
+
     /**
      * Method to initialize audit for an element
      * @uses WsdlToPhpGenerator::audit()
@@ -3585,10 +3606,11 @@ class WsdlToPhpGenerator extends SoapClient
      * @param string $_auditElement audit specific element
      * @return bool true
      */
-    private static function auditInit($_auditName,$_auditElement = '')
+    private static function auditInit($_auditName, $_auditElement = '')
     {
-        return self::audit($_auditName,$_auditElement,0,true);
+        return self::audit($_auditName, $_auditElement, 0, true);
     }
+
     /**
      * Returns the audit informations
      * @uses WsdlToPhpGenerator::getGlobal()
@@ -3597,8 +3619,9 @@ class WsdlToPhpGenerator extends SoapClient
      */
     public static function getAudit()
     {
-        return self::getGlobal(self::WSDL_TO_PHP_GENERATOR_AUDIT_KEY,array());
+        return self::getGlobal(self::WSDL_TO_PHP_GENERATOR_AUDIT_KEY, array());
     }
+
     /**
      * Returns current class name
      * @return string __CLASS__
